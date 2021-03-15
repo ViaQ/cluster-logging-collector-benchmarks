@@ -1,0 +1,55 @@
+apiVersion: v1
+kind: Template
+metadata:
+  name: logcollector
+objects:
+#
+# Deployment of fluentd log collector
+#
+- apiVersion: apps/v1
+  kind: Deployment
+  metadata:
+    name: fluentd
+  spec:
+    replicas: 1
+    selector:
+      matchLabels:
+        app: fluentd
+    template:
+      metadata:
+        labels:
+          app: fluentd
+      spec:
+        containers:
+        - image: ${fluentd_image}
+          securityContext:
+            privileged: true
+            allowPrivilegeEscalation: true
+          imagePullPolicy: Always
+          name: fluentd
+          command: ["/bin/bash"]
+          args:
+            - -c
+            - >
+              rm -r /var/log/containers/fluentd.stresslog;
+              rm /var/log/containers/stress.log;
+              /usr/local/bin/fluentd -c /etc/fluent/fluent.conf;
+              while true; do
+                echo ".";
+                sleep 60;
+              done;
+          volumeMounts:
+          - name: varlog
+            mountPath: /var/log
+          - name: config-path
+            mountPath: /etc/fluent
+        restartPolicy: Always
+        volumes:
+        - name: varlog
+          hostPath:
+            path: /var/log
+        - name: config-path
+          configMap:
+            name: fluentd-config        
+parameters:
+  - name: fluentd_image
