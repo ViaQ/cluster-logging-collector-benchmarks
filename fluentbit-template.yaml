@@ -1,0 +1,54 @@
+apiVersion: v1
+kind: Template
+metadata:
+  name: logcollector
+objects:
+#
+# Deployment of fluentbit log collector
+#
+- apiVersion: apps/v1
+  kind: Deployment
+  metadata:
+    name: fluentbit
+  spec:
+    replicas: 1
+    selector:
+      matchLabels:
+        app: fluentbit
+    template:
+      metadata:
+        labels:
+          app: fluentbit
+      spec:
+        containers:
+        - image: ${fluentbit_image}
+          securityContext:
+            privileged: true
+            allowPrivilegeEscalation: true
+          imagePullPolicy: Always
+          name: fluentd
+          command: ["/usr/local/bin/sh"]
+          args:
+          - -c
+          - >
+            rm /var/log/containers/stress.log;
+            /fluent-bit/bin/fluent-bit -c /etc/fluentbit/fluentbit.conf -R /etc/fluentbit/fluentbit.parsers.conf;
+            while true; do
+              echo ".";
+              sleep 60;
+            done;
+          volumeMounts:
+          - name: varlog
+            mountPath: /var/log
+          - name: config-path
+            mountPath: /etc/fluentbit
+        volumes:
+        - name: varlog
+          hostPath:
+            path: /var/log
+        - name: config-path
+          configMap:
+            name: fluentbit-config
+        restartPolicy: Always
+parameters:
+  - name: fluentbit_image

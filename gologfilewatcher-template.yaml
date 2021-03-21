@@ -1,0 +1,39 @@
+apiVersion: v1
+kind: Template
+metadata:
+  name: gologfilewatcher
+objects:
+#
+# Deployment of gologfilewatcher log collector
+#
+- apiVersion: apps/v1
+  kind: Deployment
+  metadata:
+    name: gologfilewatcher
+  spec:
+    replicas: 1
+    selector:
+      matchLabels:
+        app: gologfilewatcher
+    template:
+      metadata:
+        labels:
+          app: gologfilewatcher
+      spec:
+        containers:
+        - image: ${gologfilewatcher_image}
+          securityContext:
+            privileged: true
+            allowPrivilegeEscalation: true
+          imagePullPolicy: Always
+          name: gologfilewatcher
+          volumeMounts:
+          - name: varlog
+            mountPath: /var/log
+        restartPolicy: Always
+        volumes:
+        - name: varlog
+          hostPath:
+            path: /var/log
+parameters:
+  - name: gologfilewatcher_image

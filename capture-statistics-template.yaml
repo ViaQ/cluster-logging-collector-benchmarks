@@ -1,0 +1,62 @@
+apiVersion: v1
+kind: Template
+metadata:
+  name: capturestatistics
+objects:
+#
+# Deployment of fluentd log collector
+#
+- apiVersion: apps/v1
+  kind: Deployment
+  metadata:
+    name: capturestatistics
+  spec:
+    replicas: 1
+    selector:
+      matchLabels:
+        app: capturestatistics
+    template:
+      metadata:
+        labels:
+          app: capturestatistics
+      spec:
+        containers:
+        - image: registry.fedoraproject.org/fedora
+          securityContext:
+            privileged: true
+            allowPrivilegeEscalation: true
+          imagePullPolicy: Always
+          name: capturestatistics
+          command: ["/bin/bash"]
+          args:
+          - -c
+          - >
+            yum install -y procps;
+            yum install -y unzip;
+            unzip /go/bin/check-logs-sequence.zip;
+            echo "Collecting Statistics";
+            OUTPUT_FILE=/var/log/containers/stress.log;
+            echo -e "\nOutput log file is: $OUTPUT_FILE\n";
+            touch $OUTPUT_FILE;
+            ./check-logs-sequence -f $OUTPUT_FILE -c ${number_of_log_lines_between_reports} &
+            echo ".";
+            while true; do
+              echo "====> Top information on: $(date)";
+              COLUMNS=1000 top -b -n 1 | head -n 40;
+              sleep 120;
+            done;        
+          volumeMounts:
+          - name: varlog
+            mountPath: /var/log
+          - name: checklogssequence
+            mountPath: /go/bin
+        volumes:
+        - name: varlog
+          hostPath:
+            path: /var/log
+        - name: checklogssequence
+          configMap:
+            name: check-logs-sequence-binary-zip
+        hostPID: true
+parameters:
+  - name: number_of_log_lines_between_reports
