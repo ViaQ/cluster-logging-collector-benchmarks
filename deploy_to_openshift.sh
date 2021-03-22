@@ -6,8 +6,8 @@ source ./deploy_functions.sh
 #default parameters
 stress_profile="very-light"
 evacuate_node="false"
-fluentd_image="quay.io/openshift/origin-logging-fluentd:latest"
-gologfilewatcher_image="docker.io/cognetive/go-log-file-watcher-driver-v0"
+fluentd_image="docker.io/cognetive/origin-logging-fluentd:0.1"
+gologfilewatcher_image="docker.io/cognetive/go-log-file-watcher-with-symlink-support-v0"
 fluentbit_image="fluent/fluent-bit:1.7-debug"
 collector="fluentd"
 

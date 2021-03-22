@@ -1,0 +1,15 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  labels:
+    k8s-app: go-monitor
+  name: go-monitor
+  namespace: logstress
+spec:
+  endpoints:
+  - interval: 5s
+    port: web
+    scheme: http
+  selector:
+    matchLabels:
+      app: gologfilewatcher
