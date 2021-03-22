@@ -10,6 +10,7 @@ select_node_to_use() {
 # configure containers log-max-size to 10MB
 configure_workers_log_rotation() {
   echo "--> Configuring log-max-size for nodes to $1"
+  oc label mcp worker custom-crio=true --overwrite
   oc delete ctrcfg logsizemax
   oc create -f - <<EOF
 apiVersion: machineconfiguration.openshift.io/v1
