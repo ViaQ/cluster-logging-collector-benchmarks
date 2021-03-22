@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: gologfilewatcher
+  name: gologfilewatcher
+  namespace: logstress
+spec:
+  ports:
+  - port: 2112
+    protocol: TCP
+    targetPort: 2112
+    name: web
+  selector:
+    app: gologfilewatcher
+  type: ClusterIP
