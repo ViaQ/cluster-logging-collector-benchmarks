@@ -57,15 +57,17 @@ set_credentials() {
 
 # deploy log stress containers
 deploy_logstress() {
-  DEPLOY_YAML=logstress-template.yaml
+  DEPLOY_YAML=conf/stressor/logstress-template.yaml
 
   echo "--> Deploying $DEPLOY_YAML - with ($1 $2 $3 $4)"
-  rm log-stressor.zip
-  rm log-stressor
-  go build -ldflags "-s -w" log-stressor.go
+  rm -f log-stressor.zip
+  rm -f log-stressor
+  go build -ldflags "-s -w" go/log-stressor/log-stressor.go
   zip log-stressor.zip  log-stressor
   oc delete configmap --ignore-not-found=true log-stressor-binary-zip
   oc create configmap log-stressor-binary-zip --from-file=log-stressor.zip
+  rm -f log-stressor.zip
+  rm -f log-stressor
 
   oc process -f $DEPLOY_YAML \
     -p number_heavy_stress_containers="$1" \
@@ -77,11 +79,11 @@ deploy_logstress() {
 
 # deploy log collector (fluentd) container
 deploy_log_collector_fluentd() {
-  DEPLOY_YAML=fluentd-template.yaml
+  DEPLOY_YAML=conf/collector/fluentd/fluentd-template.yaml
 
   echo "--> Deploying $DEPLOY_YAML - with ($1)"
   oc delete configmap --ignore-not-found=true fluentd-config
-  oc create configmap fluentd-config --from-file=fluent.conf
+  oc create configmap fluentd-config --from-file=conf/collector/fluentd/fluentd.conf
   oc process -f $DEPLOY_YAML \
     -p fluentd_image="$1" \
     | oc apply -f -
@@ -89,7 +91,7 @@ deploy_log_collector_fluentd() {
 
 #deploy gologfilewatch container
 deploy_gologfilewatcher() {
-	DEPLOY_YAML=gologfilewatcher-template.yaml
+	DEPLOY_YAML=conf/expose_metrics/gologfilewatcher-template.yaml
 
 	echo "--> Deploying $DEPLOY_YAML -with ($1)"
 	oc process -f $DEPLOY_YAML \
@@ -99,11 +101,11 @@ deploy_gologfilewatcher() {
 
 # deploy log collector (fluentbit) container
 deploy_log_collector_fluentbit() {
-  DEPLOY_YAML=fluentbit-template.yaml
+  DEPLOY_YAML=conf/collector/fluentbit/fluentbit-template.yaml
 
   echo "--> Deploying $DEPLOY_YAML - with ($1)"
   oc delete configmap --ignore-not-found=true fluentbit-config
-  oc create configmap fluentbit-config --from-file=fluentbit.conf --from-file=fluentbit.parsers.conf
+  oc create configmap fluentbit-config --from-file=conf/collector/fluentbit/fluentbit.conf --from-file=conf/collector/fluentbit/fluentbit.parsers.conf
   oc process -f $DEPLOY_YAML \
     -p fluentbit_image="$1" \
     | oc apply -f -
@@ -111,16 +113,18 @@ deploy_log_collector_fluentbit() {
 
 # deploy capture statistics container
 deploy_capture_statistics() {
-  DEPLOY_YAML=capture-statistics-template.yaml
+  DEPLOY_YAML=conf/monitor/capture-statistics-template.yaml
 
   echo "--> Deploying $DEPLOY_YAML - with ($1)"
-  rm check-logs-sequence.zip
-  rm check-logs-sequence
+  rm -f check-logs-sequence.zip
+  rm -f check-logs-sequence
   go get -u github.com/papertrail/go-tail
-  go build -ldflags "-s -w" check-logs-sequence.go
+  go build -ldflags "-s -w" go/check-logs-sequence/check-logs-sequence.go
   zip check-logs-sequence.zip  check-logs-sequence
   oc delete configmap --ignore-not-found=true check-logs-sequence-binary-zip
   oc create configmap check-logs-sequence-binary-zip --from-file=check-logs-sequence.zip
+  rm -f check-logs-sequence.zip
+  rm -f check-logs-sequence
   oc process -f $DEPLOY_YAML \
   -p number_of_log_lines_between_reports="$1" \
   | oc apply -f -
