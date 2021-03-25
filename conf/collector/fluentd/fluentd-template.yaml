@@ -33,7 +33,7 @@ objects:
             - >
               rm -r /var/log/containers/fluentd.stresslog;
               rm /var/log/containers/stress.log;
-              /usr/local/bin/fluentd -c /etc/fluent/fluent.conf;
+              /usr/local/bin/fluentd -c /etc/fluentd/fluentd.conf;
               while true; do
                 echo ".";
                 sleep 60;
@@ -42,7 +42,7 @@ objects:
           - name: varlog
             mountPath: /var/log
           - name: config-path
-            mountPath: /etc/fluent
+            mountPath: /etc/fluentd
         restartPolicy: Always
         volumes:
         - name: varlog

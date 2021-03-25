@@ -1,7 +1,7 @@
 #!/bin/bash
 
-source ./deploy_functions.sh
-
+source ./contrib/deploy_functions.sh
+source ./contrib/expose_metrics.sh
 
 #default parameters
 stress_profile="very-light"
@@ -150,6 +150,7 @@ main() {
     'fluentbit') deploy_log_collector_fluentbit "$fluentbit_image" ;;
     *) show_usage ;;
   esac
+  expose_metrics_to_prometheus
   deploy_capture_statistics $number_of_log_lines_between_reports
   if $evacuate_node ; then evacuate_node_for_performance_tests; fi
   print_pods_status

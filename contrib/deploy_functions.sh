@@ -160,9 +160,13 @@ print_pods_status () {
 print_usage_instructions () {
   CAPTURE_STATISTICS_POD=$(oc get pod -l app=capturestatistics -o jsonpath="{.items[0].metadata.name}")
 
-  sleep 10
   echo -e "\n\nExplore logs of relevant pods ^^^"
   echo -e "Tailing pod $CAPTURE_STATISTICS_POD using command:"
+  while : ; do
+    POD_READY=$(oc get pod "$CAPTURE_STATISTICS_POD" | grep Running)
+    if [ -n "$POD_READY" ]; then break; fi
+    sleep 1
+  done
   command="oc logs -f $CAPTURE_STATISTICS_POD"
   echo -e "$command"
   $command

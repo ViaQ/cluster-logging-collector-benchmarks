@@ -33,6 +33,8 @@ objects:
           - >
             yum install -y procps;
             yum install -y unzip;
+            curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl";
+            chmod +x kubectl;
             unzip /go/bin/check-logs-sequence.zip;
             echo "Collecting Statistics";
             OUTPUT_FILE=/var/log/containers/stress.log;
@@ -42,7 +44,11 @@ objects:
             echo ".";
             while true; do
               echo "====> Top information on: $(date)";
-              COLUMNS=1000 top -b -n 1 | head -n 40;
+              COLUMNS=1000 top -b -n 1 -o +%CPU | sed 1,6d | awk '{print $9"\t|\t"$10"\t|\t"$12}' | column -t | head -n 20;
+              echo "=============";
+              echo "====> K8S Top information";
+              ./kubectl top pod --namespace="logstress" --sort-by="cpu" | head -n 20;
+              echo "=============";
               sleep 120;
             done;        
           volumeMounts:
