@@ -51,5 +51,24 @@ objects:
         - name: config-path
           configMap:
             name: fluentd-config        
+#
+# Service for fluentd forward port
+#
+- apiVersion: v1
+  kind: Service
+  metadata:
+    labels:
+      app: fluentd
+    name: fluentd
+  spec:
+    ports:
+      - name: forward
+        port: 24224
+        protocol: TCP
+        targetPort: 24224
+    selector:
+      app: fluentd
+    sessionAffinity: None
+    type: ClusterIP
 parameters:
   - name: fluentd_image

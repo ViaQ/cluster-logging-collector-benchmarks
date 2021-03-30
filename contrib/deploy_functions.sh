@@ -81,9 +81,9 @@ deploy_logstress() {
 deploy_log_collector_fluentd() {
   DEPLOY_YAML=conf/collector/fluentd/fluentd-template.yaml
 
-  echo "--> Deploying $DEPLOY_YAML - with ($1)"
+  echo "--> Deploying $DEPLOY_YAML - with ($1 $2)"
   oc delete configmap --ignore-not-found=true fluentd-config
-  oc create configmap fluentd-config --from-file=conf/collector/fluentd/fluentd.conf
+  oc create configmap fluentd-config --from-file="$2"
   oc process -f $DEPLOY_YAML \
     -p fluentd_image="$1" \
     | oc apply -f -
@@ -105,7 +105,7 @@ deploy_log_collector_fluentbit() {
 
   echo "--> Deploying $DEPLOY_YAML - with ($1)"
   oc delete configmap --ignore-not-found=true fluentbit-config
-  oc create configmap fluentbit-config --from-file=conf/collector/fluentbit/fluentbit.conf --from-file=conf/collector/fluentbit/fluentbit.parsers.conf
+  oc create configmap fluentbit-config --from-file="$2" --from-file=conf/collector/fluentbit/fluentbit.parsers.conf
   oc process -f $DEPLOY_YAML \
     -p fluentbit_image="$1" \
     | oc apply -f -
@@ -161,12 +161,13 @@ print_usage_instructions () {
   CAPTURE_STATISTICS_POD=$(oc get pod -l app=capturestatistics -o jsonpath="{.items[0].metadata.name}")
 
   echo -e "\n\nExplore logs of relevant pods ^^^"
-  echo -e "Tailing pod $CAPTURE_STATISTICS_POD using command:"
+  echo -e "Waiting for $CAPTURE_STATISTICS_POD to become ready"
   while : ; do
     POD_READY=$(oc get pod "$CAPTURE_STATISTICS_POD" | grep Running)
     if [ -n "$POD_READY" ]; then break; fi
     sleep 1
   done
+  echo -e "Tailing pod $CAPTURE_STATISTICS_POD using command:"
   command="oc logs -f $CAPTURE_STATISTICS_POD"
   echo -e "$command"
   $command
