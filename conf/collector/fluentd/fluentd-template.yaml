@@ -59,7 +59,7 @@ objects:
   metadata:
     labels:
       app: fluentd
-    name: fluentd
+    name: fluentd-forward
   spec:
     ports:
       - name: forward

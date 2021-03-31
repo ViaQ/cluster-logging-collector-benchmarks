@@ -1,4 +1,4 @@
-fluentd#!/bin/bash
+#!/bin/bash
 
 source ./contrib/deploy_functions.sh
 source ./contrib/expose_metrics.sh
