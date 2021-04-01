@@ -105,7 +105,7 @@ deploy_log_collector_fluentbit() {
 
   echo "--> Deploying $DEPLOY_YAML - with ($1)"
   oc delete configmap --ignore-not-found=true fluentbit-config
-  oc create configmap fluentbit-config --from-file="$2" --from-file=conf/collector/fluentbit/fluentbit.parsers.conf
+  oc create configmap fluentbit-config --from-file="$2" --from-file=conf/collector/fluentbit/fluentbit.parsers.conf --from-file=conf/collector/fluentbit/fluentbit.merge-crio-multiline.lua
   oc process -f $DEPLOY_YAML \
     -p fluentbit_image="$1" \
     | oc apply -f -
