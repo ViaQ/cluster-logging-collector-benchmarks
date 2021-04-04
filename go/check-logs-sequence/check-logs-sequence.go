@@ -25,6 +25,7 @@ type logSourceInfo struct {
 
 type reportStatistics struct {
 	totalLogsCollectedCount int64
+	totalLogsSkippedCount   int64
 	startMonitoringTime     time.Time
 }
 
@@ -53,7 +54,7 @@ func main() {
 	logsTotalInfo := make(map[string]logSourceInfo)
 	reportData := reportStatistics{}
 
-	reportData.startMonitoringTime = time.Now().Add(-1* time.Second)
+	reportData.startMonitoringTime = time.Now().Add(-1 * time.Second)
 
 	// forever loop tailing on the file
 	for {
@@ -76,12 +77,14 @@ func main() {
 			if errParse != nil {
 				log.Error("Error in Line: ", line.String())
 				log.Error(errParse)
+				reportData.totalLogsSkippedCount += 1
 				continue
 			}
 
 			// Skip not full log lines
 			if logTag != "F" {
 				log.Error("Skipping line with logTag not [F]: ", line.String())
+				reportData.totalLogsSkippedCount += 1
 				continue
 			}
 
@@ -97,7 +100,8 @@ func main() {
 			entry := logsCurrentInfo[name]
 			if entry.hashID != hashID {
 				fmt.Printf("Error in Line: %s\n", line.String())
-				fmt.Printf("Source Identification Hash ID (current) is wrong for [%s]: should be %s but is %s\n",name, entry.hashID, hashID )
+				fmt.Printf("Source Identification Hash ID (current) is wrong for [%s]: should be %s but is %s\n", name, entry.hashID, hashID)
+				reportData.totalLogsSkippedCount += 1
 				continue
 			}
 
@@ -105,14 +109,15 @@ func main() {
 			totalEntry := logsTotalInfo[name]
 			if totalEntry.hashID != hashID {
 				fmt.Printf("Error in Line: %s\n", line.String())
-				fmt.Printf("Source Identification Hash ID (total) is wrong for [%s]: should be %s but is %s\n",name, totalEntry.hashID, hashID )
+				fmt.Printf("Source Identification Hash ID (total) is wrong for [%s]: should be %s but is %s\n", name, totalEntry.hashID, hashID)
+				reportData.totalLogsSkippedCount += 1
 				continue
 			}
 
 			// calculate current metrics
 			if entry.lastCollected != 0 && seq < entry.lastCollected {
 				log.Error("Error in Line: ", line.String())
-				log.Errorf("Out of order sequence for[%s]: last collected seq is %d but we got %d\n", name, entry.lastCollected, seq )
+				log.Errorf("Out of order sequence for[%s]: last collected seq is %d but we got %d\n", name, entry.lastCollected, seq)
 			}
 			if seq < entry.smallestSeq {
 				entry.smallestSeq = seq
@@ -167,14 +172,14 @@ func parseLine(line string) (err error, name string, seq int64, logTag string, h
 	pathStartIndex := strings.Index(line, "\"path\":\"")
 	if pathStartIndex == -1 {
 		err = errors.New("parseLine: cant find path start")
-		return err, "", 0,"", ""
+		return err, "", 0, "", ""
 	}
 	pathStartIndex += len("\"path\":\"")
 
 	pathEndIndex := strings.Index(line[pathStartIndex:], "\"")
 	if pathEndIndex == -1 {
 		err = errors.New("parseLine: cant find path end")
-		return err, "", 0,"", ""
+		return err, "", 0, "", ""
 	}
 
 	path := line[pathStartIndex : pathStartIndex+pathEndIndex]
@@ -183,17 +188,17 @@ func parseLine(line string) (err error, name string, seq int64, logTag string, h
 	nameSliced := strings.Split(path, "_")
 	if len(nameSliced) < 1 {
 		err = errors.New("parseLine: can't parse _ in path")
-		return err, "", 0,"", ""
+		return err, "", 0, "", ""
 	}
 	nameSliced = strings.Split(fmt.Sprintf("%s", nameSliced[0]), "/")
 	if len(nameSliced) < 5 {
 		err = errors.New("parseLine: can't parse / in path")
-		return err, "", 0,"", ""
+		return err, "", 0, "", ""
 	}
 
 	if nameSliced[3] != "containers" {
 		err = errors.New("parseLine: can't parse / path -> follow only  /var/log/containers ")
-		return err, "", 0,"", ""
+		return err, "", 0, "", ""
 	}
 	name = nameSliced[4]
 
@@ -201,14 +206,14 @@ func parseLine(line string) (err error, name string, seq int64, logTag string, h
 	messageStartIndex := strings.Index(line, "\"message\":\"")
 	if messageStartIndex == -1 {
 		err = errors.New("parseLine: cant find message start")
-		return err, "", 0,"", ""
+		return err, "", 0, "", ""
 	}
 	messageStartIndex += len("\"message\":\"")
 
 	messageEndIndex := strings.Index(line[messageStartIndex:], "\"")
 	if messageEndIndex == -1 {
 		err = errors.New("parseLine: cant find message end")
-		return err, "", 0,"", ""
+		return err, "", 0, "", ""
 	}
 	message := line[messageStartIndex : messageStartIndex+messageEndIndex]
 
@@ -216,13 +221,13 @@ func parseLine(line string) (err error, name string, seq int64, logTag string, h
 	logSliced := strings.Split(message, "-")
 	if len(logSliced) < 3 {
 		err = errors.New("parseLine: can't parse - in log")
-		return err, "", 0,"", ""
+		return err, "", 0, "", ""
 	}
 	seqStr := strings.TrimSpace(logSliced[2])
 	seq, err = strconv.ParseInt(seqStr, 10, 0)
 	if err != nil {
 		err = errors.New("parseLine: can't parse ParseInt in log")
-		return err, "", 0,"", ""
+		return err, "", 0, "", ""
 	}
 
 	// get the hashID from the log
@@ -236,9 +241,10 @@ func report(reportData reportStatistics, logsCurrentInfo map[string]logSourceInf
 	fmt.Printf("Report at: %s\n", now.String())
 	fmt.Printf("-==-=-=-=-=\n")
 	if !reportData.startMonitoringTime.IsZero() {
+		fmt.Printf("Time from start monitoring (in secs): %d\n", deltaTimeInSeconds)
 		fmt.Printf("Total number of collected logs: %d\n", reportData.totalLogsCollectedCount)
 		fmt.Printf("Total collected logs per sec: %d\n", reportData.totalLogsCollectedCount/deltaTimeInSeconds)
-		fmt.Printf("Time from start monitoring (in secs): %d\n", deltaTimeInSeconds)
+		fmt.Printf("Skipped log lines: %d\n", reportData.totalLogsSkippedCount)
 	}
 
 	fmt.Printf("-==-=-=-=-=\n")
@@ -255,7 +261,7 @@ func report(reportData reportStatistics, logsCurrentInfo map[string]logSourceInf
 		"",
 		"",
 		"")
-	fmt.Printf(strings.Repeat("-", tableFormatLen)+ "\n")
+	fmt.Printf(strings.Repeat("-", tableFormatLen) + "\n")
 	fmt.Printf(tableFormat,
 		"Container name",
 		"Logged",
@@ -267,7 +273,7 @@ func report(reportData reportStatistics, logsCurrentInfo map[string]logSourceInf
 		"Co./Sec",
 		"Loss",
 	)
-	fmt.Printf(strings.Repeat("-", tableFormatLen)+ "\n")
+	fmt.Printf(strings.Repeat("-", tableFormatLen) + "\n")
 
 	names := make([]string, 0)
 	for k := range logsTotalInfo {
