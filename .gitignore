@@ -1,4 +1,4 @@
 *.zip
 .idea/**
-check-logs-sequence
-log-stressor
+/check-logs-sequence
+/log-stressor
