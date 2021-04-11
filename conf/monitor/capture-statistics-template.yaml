@@ -49,6 +49,7 @@ objects:
               echo "=============";
               echo "====> K8S Top information";
               ./kubectl top pod --namespace="logstress" --sort-by="cpu" --use-protocol-buffers | head -n 20;
+              ./kubectl top pod --namespace="loki" --sort-by="cpu" --use-protocol-buffers | head -n 20;
               echo "=============";
               sleep 120;
             done;        

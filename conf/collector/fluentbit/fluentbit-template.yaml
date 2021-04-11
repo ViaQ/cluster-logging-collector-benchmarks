@@ -27,7 +27,7 @@ objects:
             privileged: true
             allowPrivilegeEscalation: true
           imagePullPolicy: Always
-          name: fluentd
+          name: fluentbit
           command: ["/usr/local/bin/sh"]
           args:
           - -c

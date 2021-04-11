@@ -18,7 +18,7 @@ usage: deploy_to_openshift [options]
     -h, --help              Show usage
     -e  --evacuate=[enum]   Evacuate node  (false, true  default: false)
     -p  --profile=[enum]    Stress profile (no-stress, very-light, light, medium, heavy, heavy-loss, very-heavy  default: very-light)
-    -c  --collector=[enum]  Logs collector (fluentd, fluentbit, dual default: fluentd)
+    -c  --collector=[enum]  Logs collector (fluentd, fluentbit, fluentbit-loki, dual default: fluentd)
     -fi --fimage=[string]   Fluentd image to use (default: quay.io/openshift/origin-logging-fluentd:latest)
     -bi --bimage=[string]   Fluentbit image to use (default: quay.io/openshift/origin-logging-fluentd:latest)
     -gi --gimage=[string]   Gologfilewatcher image to use (default: docker.io/cognetive/go-log-file-watcher-driver-v0)
@@ -148,6 +148,7 @@ main() {
   case "$collector" in
     'fluentd') deploy_log_collector_fluentd "$fluentd_image" conf/collector/fluentd/fluentd.conf;;
     'fluentbit') deploy_log_collector_fluentbit "$fluentbit_image" conf/collector/fluentbit/fluentbit.conf;;
+    'fluentbit-loki') deploy_log_collector_fluentbit "$fluentbit_image" conf/collector/fluentbit/loki/fluentbit.conf;;
     'dual') deploy_log_collector_fluentd "$fluentd_image" conf/collector/fluentd/dual/fluentd.conf;
             deploy_log_collector_fluentbit "$fluentbit_image" conf/collector/fluentbit/dual/fluentbit.conf;;
     *) show_usage ;;
