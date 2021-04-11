@@ -23,6 +23,7 @@ objects:
         containers:
         - image: registry.fedoraproject.org/fedora
           securityContext:
+            runAsUser: 0
             privileged: true
             allowPrivilegeEscalation: true
           imagePullPolicy: Always
@@ -47,7 +48,7 @@ objects:
               COLUMNS=1000 top -b -n 1 -o +%CPU | sed 1,6d | awk '{print $9"\t|\t"$10"\t|\t"$12}' | column -t | head -n 20;
               echo "=============";
               echo "====> K8S Top information";
-              ./kubectl top pod --namespace="logstress" --sort-by="cpu" | head -n 20;
+              ./kubectl top pod --namespace="logstress" --sort-by="cpu" --use-protocol-buffers | head -n 20;
               echo "=============";
               sleep 120;
             done;        

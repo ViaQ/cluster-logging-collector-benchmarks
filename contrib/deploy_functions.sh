@@ -53,6 +53,9 @@ create_logstress_project() {
 set_credentials() {
   oc adm policy add-scc-to-user privileged -z default
   oc adm policy add-cluster-role-to-user cluster-reader -z default
+  oc adm policy add-scc-to-group anyuid system:authenticated
+  oc patch scc restricted --type=json -p '[{"op": "replace", "path": "/allowHostDirVolumePlugin", "value":true}]'
+  oc patch scc restricted --type=json -p '[{"op": "replace", "path": "/allowPrivilegedContainer", "value":true}]'
 }
 
 # deploy log stress containers

@@ -23,6 +23,7 @@ objects:
         containers:
         - image: registry.fedoraproject.org/fedora
           securityContext:
+            runAsUser: 0
             privileged: true
             allowPrivilegeEscalation: true
           imagePullPolicy: Always
@@ -69,6 +70,7 @@ objects:
         containers:
         - image: registry.fedoraproject.org/fedora
           securityContext:
+            runAsUser: 0
             privileged: true
             allowPrivilegeEscalation: true
           imagePullPolicy: Always

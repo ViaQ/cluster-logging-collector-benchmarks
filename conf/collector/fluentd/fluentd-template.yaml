@@ -23,6 +23,7 @@ objects:
         containers:
         - image: ${fluentd_image}
           securityContext:
+            runAsUser: 0
             privileged: true
             allowPrivilegeEscalation: true
           imagePullPolicy: Always
