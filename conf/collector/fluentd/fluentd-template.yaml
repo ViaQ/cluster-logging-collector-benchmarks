@@ -34,6 +34,12 @@ objects:
             - >
               rm -r /var/log/containers/fluentd.stresslog;
               rm /var/log/containers/stress.log;
+              echo "Installing loki plugin";
+              yum update -y;
+              yum install -y gcc make autoconf;
+              yum install -y redhat-rpm-config;
+              fluent-gem install fluent-plugin-grafana-loki;
+              echo "Starting fluentd";
               /usr/local/bin/fluentd -c /etc/fluentd/fluentd.conf;
               while true; do
                 echo ".";
