@@ -1,16 +1,25 @@
 package main
 
 import (
-	"flag"
+    "flag"
     "fmt"
     "log"
     "math/rand"
-    "strings"
     "time"
 )
 
 const  minBurstMessageCount = 100
 const  numberOfBursts = 10
+
+const letterBytes = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+
+func RandStringBytes(n int) string {
+    b := make([]byte, n)
+    for i := range b {
+        b[i] = letterBytes[rand.Intn(len(letterBytes))]
+    }
+    return string(b)
+}
 
 func main() {
 
@@ -26,6 +35,8 @@ func main() {
 
     flag.Parse()
 
+    rand.Seed(time.Now().UnixNano())
+
     var rnd = rand.New( rand.NewSource(time.Now().UnixNano()))
     hash := fmt.Sprintf("%032X", rnd.Uint64())
 
@@ -37,8 +48,8 @@ func main() {
     messageCount := 0
     startTime := time.Now().Unix() -1
     for {
-        payload := strings.Repeat("*", payloadSize)
         for i := 0; i < messagesPerSecond/bursts; i++ {
+            payload := RandStringBytes(payloadSize)
             log.Printf("goloader seq - %s - %010d - %s",hash, messageCount, payload)
             messageCount ++
         }
