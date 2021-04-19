@@ -2,3 +2,4 @@
 .idea/**
 /check-logs-sequence
 /log-stressor
+/tmp

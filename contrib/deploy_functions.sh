@@ -85,8 +85,10 @@ deploy_log_collector_fluentd() {
   DEPLOY_YAML=conf/collector/fluentd/fluentd-template.yaml
 
   echo "--> Deploying $DEPLOY_YAML - with ($1 $2)"
+  rm -f tmp/fluentd.conf
+  cp "$2" tmp/fluentd.conf
   oc delete configmap --ignore-not-found=true fluentd-config
-  oc create configmap fluentd-config --from-file="$2"
+  oc create configmap fluentd-config --from-file=tmp/fluentd.conf
   oc process -f $DEPLOY_YAML \
     -p fluentd_image="$1" \
     | oc apply -f -

@@ -7,6 +7,7 @@ source ./contrib/expose_metrics.sh
 stress_profile="very-light"
 evacuate_node="false"
 fluentd_image="docker.io/cognetive/origin-logging-fluentd:0.1"
+fluent_conf_file="conf/collector/fluentd/fluentd.conf"
 gologfilewatcher_image="docker.io/cognetive/go-log-file-watcher-with-symlink-support-v0"
 fluentbit_image="fluent/fluent-bit:1.7-debug"
 collector="fluentd"
@@ -16,12 +17,13 @@ show_usage() {
 usage: deploy_to_openshift [options]
   options:
     -h, --help              Show usage
-    -e  --evacuate=[enum]   Evacuate node  (false, true  default: false)
-    -p  --profile=[enum]    Stress profile (no-stress, very-light, light, medium, heavy, heavy-loss, very-heavy  default: very-light)
-    -c  --collector=[enum]  Logs collector (fluentd, fluentbit, fluentd-loki, fluentbit-loki, dual default: fluentd)
-    -fi --fimage=[string]   Fluentd image to use (default: quay.io/openshift/origin-logging-fluentd:latest)
-    -bi --bimage=[string]   Fluentbit image to use (default: quay.io/openshift/origin-logging-fluentd:latest)
-    -gi --gimage=[string]   Gologfilewatcher image to use (default: docker.io/cognetive/go-log-file-watcher-driver-v0)
+    -e  --evacuate=[enum]    Evacuate node  (false, true  default: false)
+    -p  --profile=[enum]     Stress profile (no-stress, very-light, light, medium, heavy, heavy-loss, very-heavy  default: very-light)
+    -c  --collector=[enum]   Logs collector (fluentd, fluentbit, fluentd-loki, fluentbit-loki, dual default: fluentd)
+    -fc --fluentconf=[enum]  fluent conf file (default: conf/collector/fluentd/fluentd.conf)
+    -fi --fimage=[string]    Fluentd image to use (default: quay.io/openshift/origin-logging-fluentd:latest)
+    -bi --bimage=[string]    Fluentbit image to use (default: quay.io/openshift/origin-logging-fluentd:latest)
+    -gi --gimage=[string]    Gologfilewatcher image to use (default: docker.io/cognetive/go-log-file-watcher-driver-v0)
 "
   exit 0
 }
@@ -32,6 +34,7 @@ case $i in
     -e=*|--evacuate_node=*) evacuate_node="${i#*=}"; shift ;;
     -p=*|--profile=*) stress_profile="${i#*=}"; shift ;;
     -c=*|--collector=*) collector="${i#*=}"; shift ;;
+    -fc=*|--fluentconf=*) fluent_conf_file="${i#*=}"; shift ;;
     -fi=*|--fimage=*) fluentd_image="${i#*=}"; shift ;;
     -bi=*|--bimage=*) fluentbit_image="${i#*=}"; shift ;;
     -gi=*|--gimage=*) gologfilewatcher_image="${i#*=}"; shift ;;
@@ -129,6 +132,7 @@ Low stress containers msg per second --> $low_containers_msg_per_sec
 Number of log lines between reports --> $number_of_log_lines_between_reports
 Maximum size of log file --> $maximum_logfile_size
 Fluentd image used --> $fluentd_image
+Fluentd conf used --> $fluent_conf_file
 Fluentbit image used --> $fluentbit_image
 Gologfilewatcher image used --> $gologfilewatcher_image
 "
@@ -146,7 +150,7 @@ main() {
   deploy_logstress $number_heavy_stress_containers $heavy_containers_msg_per_sec $number_low_stress_containers $low_containers_msg_per_sec
   deploy_gologfilewatcher "$gologfilewatcher_image"
   case "$collector" in
-    'fluentd') deploy_log_collector_fluentd "$fluentd_image" conf/collector/fluentd/fluentd.conf;;
+    'fluentd') deploy_log_collector_fluentd "$fluentd_image" "$fluent_conf_file";;
     'fluentbit') deploy_log_collector_fluentbit "$fluentbit_image" conf/collector/fluentbit/fluentbit.conf;;
     'fluentd-loki') deploy_log_collector_fluentd "$fluentd_image" conf/collector/fluentd/loki/fluentd.conf;;
     'fluentbit-loki') deploy_log_collector_fluentbit "$fluentbit_image" conf/collector/fluentbit/loki/fluentbit.conf;;

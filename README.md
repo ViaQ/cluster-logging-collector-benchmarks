@@ -40,8 +40,11 @@ options execute: `./deploy_to_openshift.sh --help`
 
 For example to benchmark using **fluentbit** as the log collector
 and use **heavy** configuration profile [(detailed profile parameters)](https://github.com/ViaQ/cluster-logging-collector-benchmarks/pull/1/files#diff-44133797f573b7ceda048bb2dc56353ef30a40de72ffdfb7afc6cd5754d77339R84)
-execute  
+execute   
 `./deploy_to_openshift.sh -c=fluentbit -p=heavy`
+
+Another example using fluentd with specific configuration (partial CLO configuration)  
+`./deploy_to_openshift.sh -p=heavy -c=fluentd -fc=conf/collector/fluentd/partial/CLO_no_measure.conf`
 
 > Note: make sure to use the sign `=` between each command-line key and value
 
