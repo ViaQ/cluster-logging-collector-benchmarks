@@ -1,47 +1,20 @@
 #!/bin/bash
 
-source ./contrib/deploy_functions.sh
-source ./contrib/expose_metrics.sh
-
-#default parameters
-stress_profile="very-light"
-evacuate_node="false"
-fluentd_image="docker.io/cognetive/origin-logging-fluentd:0.1"
-fluent_conf_file="conf/collector/fluentd/fluentd.conf"
-gologfilewatcher_image="docker.io/cognetive/go-log-file-watcher-with-symlink-support-v0"
-fluentbit_image="fluent/fluent-bit:1.7-debug"
-collector="fluentd"
-
 show_usage() {
   echo "
 usage: deploy_to_openshift [options]
   options:
-    -h, --help              Show usage
-    -e  --evacuate=[enum]    Evacuate node  (false, true  default: false)
-    -p  --profile=[enum]     Stress profile (no-stress, very-light, light, medium, heavy, heavy-loss, very-heavy  default: very-light)
-    -c  --collector=[enum]   Logs collector (fluentd, fluentbit, fluentd-loki, fluentbit-loki, dual default: fluentd)
-    -fc --fluentconf=[enum]  fluent conf file (default: conf/collector/fluentd/fluentd.conf)
-    -fi --fimage=[string]    Fluentd image to use (default: quay.io/openshift/origin-logging-fluentd:latest)
-    -bi --bimage=[string]    Fluentbit image to use (default: quay.io/openshift/origin-logging-fluentd:latest)
-    -gi --gimage=[string]    Gologfilewatcher image to use (default: docker.io/cognetive/go-log-file-watcher-driver-v0)
+    -h,  --help               Show usage
+    -e,  --evacuate=[enum]    Evacuate node  (false, true  default: false)
+    -p,  --profile=[enum]     Stress profile (no-stress, very-light, light, medium, heavy, very-heavy, heavy-loss, very-heavy  default: very-light)
+    -c,  --collector=[enum]   Logs collector (fluentd, fluentbit, fluentd-loki, fluentbit-loki, dual default: fluentd)
+    -fc, --fluentconf=[enum]  fluent conf file (default: conf/collector/fluentd/fluentd.conf)
+    -fi, --fimage=[string]    Fluentd image to use (default: quay.io/openshift/origin-logging-fluentd:latest)
+    -bi, --bimage=[string]    Fluentbit image to use (default: quay.io/openshift/origin-logging-fluentd:latest)
+    -gi, --gimage=[string]    Gologfilewatcher image to use (default: docker.io/cognetive/go-log-file-watcher-driver-v0)
 "
   exit 0
 }
-
-for i in "$@"
-do
-case $i in
-    -e=*|--evacuate_node=*) evacuate_node="${i#*=}"; shift ;;
-    -p=*|--profile=*) stress_profile="${i#*=}"; shift ;;
-    -c=*|--collector=*) collector="${i#*=}"; shift ;;
-    -fc=*|--fluentconf=*) fluent_conf_file="${i#*=}"; shift ;;
-    -fi=*|--fimage=*) fluentd_image="${i#*=}"; shift ;;
-    -bi=*|--bimage=*) fluentbit_image="${i#*=}"; shift ;;
-    -gi=*|--gimage=*) gologfilewatcher_image="${i#*=}"; shift ;;
-    --nothing) nothing=true; shift ;;
-    -h|--help|*) show_usage ;;
-esac
-done
 
 select_stress_profile() {
   number_heavy_stress_containers=2
@@ -92,6 +65,14 @@ select_stress_profile() {
         number_of_log_lines_between_reports=200000;
         maximum_logfile_size=1048576;
         ;;
+      "very-heavy")
+        number_heavy_stress_containers=0;
+        heavy_containers_msg_per_sec=0;
+        number_low_stress_containers=10;
+        low_containers_msg_per_sec=3000;
+        number_of_log_lines_between_reports=300000;
+        maximum_logfile_size=1048576;
+        ;;
       "heavy-loss")
         number_heavy_stress_containers=2;
         heavy_containers_msg_per_sec=20000;
@@ -138,7 +119,7 @@ Gologfilewatcher image used --> $gologfilewatcher_image
 "
 }
 
-main() {
+deploy() {
   select_stress_profile
   show_configuration
   select_node_to_use
@@ -161,9 +142,44 @@ main() {
   expose_metrics_to_prometheus
   deploy_capture_statistics $number_of_log_lines_between_reports
   if $evacuate_node ; then evacuate_node_for_performance_tests; fi
-  print_pods_status
-  print_usage_instructions
 }
 
-main
+
+RUNNING="$(basename $(echo "$0" | sed 's/-//g'))"
+if [[ "$RUNNING" == "deploy_to_openshift.sh" ]]
+then
+
+  source ./contrib/deploy_functions.sh
+  source ./contrib/expose_metrics.sh
+
+  #default parameters
+  stress_profile="very-light"
+  evacuate_node="false"
+  fluentd_image="docker.io/cognetive/origin-logging-fluentd:0.1"
+  fluent_conf_file="conf/collector/fluentd/fluentd.conf"
+  gologfilewatcher_image="docker.io/cognetive/go-log-file-watcher-with-symlink-support-v0"
+  fluentbit_image="fluent/fluent-bit:1.7-debug"
+  collector="fluentd"
+
+  for i in "$@"
+  do
+  case $i in
+      -e=*|--evacuate_node=*) evacuate_node="${i#*=}"; shift ;;
+      -p=*|--profile=*) stress_profile="${i#*=}"; shift ;;
+      -c=*|--collector=*) collector="${i#*=}"; shift ;;
+      -fc=*|--fluentconf=*) fluent_conf_file="${i#*=}"; shift ;;
+      -fi=*|--fimage=*) fluentd_image="${i#*=}"; shift ;;
+      -bi=*|--bimage=*) fluentbit_image="${i#*=}"; shift ;;
+      -gi=*|--gimage=*) gologfilewatcher_image="${i#*=}"; shift ;;
+      --nothing) nothing=true; shift ;;
+      -h|--help|*) show_usage ;;
+  esac
+  done
+
+  deploy "$@"
+  print_pods_status
+  print_usage_instructions
+fi
+
+
 

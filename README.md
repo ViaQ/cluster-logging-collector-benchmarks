@@ -144,6 +144,15 @@ MiB Swap:      0.0 total,      0.0 free,      0.0 used.  58234.2 avail Mem
 
 ```
 
+## Automation
+
+Running the benchmark against various scenarios can be achieved using the `auto_execution.sh` script for example::
+
+```bash
+./contrib/auto_execution.sh -ff=conf/collector/fluentd/partial/
+```
+
+For more details execute with `-h` parameter
 
 
 
