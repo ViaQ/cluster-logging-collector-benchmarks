@@ -30,8 +30,7 @@ initial_deploy() {
 
       "
 
-  export stress_profile="heavy"
-  # export stress_profile="very-heavy" <-- optional for heavier stress
+  export stress_profile="very-heavy"
   export evacuate_node="false"
   export fluentd_image="docker.io/cognetive/origin-logging-fluentd:0.1"
   export fluent_conf_file="conf/collector/fluentd/fluentd.conf"
