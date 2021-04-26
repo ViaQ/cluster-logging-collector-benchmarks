@@ -65,6 +65,7 @@ deploy_logstress() {
   echo "--> Deploying $DEPLOY_YAML - with ($1 $2 $3 $4)"
   rm -f log-stressor.zip
   rm -f log-stressor
+  go env -w GO111MODULE=auto
   go build -ldflags "-s -w" go/log-stressor/log-stressor.go
   zip log-stressor.zip  log-stressor
   oc delete configmap --ignore-not-found=true log-stressor-binary-zip
@@ -84,11 +85,16 @@ deploy_logstress() {
 deploy_log_collector_fluentd() {
   DEPLOY_YAML=conf/collector/fluentd/fluentd-template.yaml
 
-  echo "--> Deploying $DEPLOY_YAML - with ($1 $2)"
+  echo "--> Deploying $DEPLOY_YAML - with ($1 $2 $3)"
   rm -f tmp/fluentd.conf
   cp "$2" tmp/fluentd.conf
   oc delete configmap --ignore-not-found=true fluentd-config
   oc create configmap fluentd-config --from-file=tmp/fluentd.conf
+  echo "" > tmp/fluentd_pre.sh
+  cp "$3" tmp/fluentd_pre.sh
+  oc delete configmap --ignore-not-found=true fluentd-pre-sh
+  oc create configmap fluentd-pre-sh --from-file=tmp/fluentd_pre.sh
+  oc delete deployment --ignore-not-found=true fluentd
   oc process -f $DEPLOY_YAML \
     -p fluentd_image="$1" \
     | oc apply -f -
@@ -124,6 +130,7 @@ deploy_capture_statistics() {
   rm -f check-logs-sequence.zip
   rm -f check-logs-sequence
   go get -u github.com/papertrail/go-tail
+  go env -w GO111MODULE=auto
   go build -ldflags "-s -w" go/check-logs-sequence/check-logs-sequence.go
   zip check-logs-sequence.zip  check-logs-sequence
   oc delete configmap --ignore-not-found=true check-logs-sequence-binary-zip

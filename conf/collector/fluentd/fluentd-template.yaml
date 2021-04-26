@@ -39,6 +39,10 @@ objects:
               yum install -y gcc make autoconf;
               yum install -y redhat-rpm-config;
               fluent-gem install fluent-plugin-grafana-loki;
+              echo "Apply custom pre-commands";
+              cp /fluentd-pre-sh/fluentd_pre.sh fluentd_pre.sh;
+              chmod +x fluentd_pre.sh;
+              ./fluentd_pre.sh;
               echo "Starting fluentd";
               /usr/local/bin/fluentd -c /etc/fluentd/fluentd.conf;
               while true; do
@@ -50,6 +54,8 @@ objects:
             mountPath: /var/log
           - name: config-path
             mountPath: /etc/fluentd
+          - name: fluentd-pre-sh
+            mountPath: /fluentd-pre-sh
         restartPolicy: Always
         volumes:
         - name: varlog
@@ -58,7 +64,11 @@ objects:
         - name: config-path
           configMap:
             name: fluentd-config        
-#
+        - name: fluentd-pre-sh
+          configMap:
+            name: fluentd-pre-sh
+
+  #
 # Service for fluentd forward port
 #
 - apiVersion: v1

@@ -12,6 +12,7 @@ usage: deploy_to_openshift [options]
     -fi, --fimage=[string]    Fluentd image to use (default: quay.io/openshift/origin-logging-fluentd:latest)
     -bi, --bimage=[string]    Fluentbit image to use (default: quay.io/openshift/origin-logging-fluentd:latest)
     -gi, --gimage=[string]    Gologfilewatcher image to use (default: docker.io/cognetive/go-log-file-watcher-driver-v0)
+    -fp, --fluentd_pre=[path] shell script to execute before fluentd starts (default =\"\")
 "
   exit 0
 }
@@ -112,10 +113,14 @@ Low stress containers msg per second --> $low_containers_msg_per_sec
 
 Number of log lines between reports --> $number_of_log_lines_between_reports
 Maximum size of log file --> $maximum_logfile_size
+
+Gologfilewatcher image used --> $gologfilewatcher_image
+
 Fluentd image used --> $fluentd_image
 Fluentd conf used --> $fluent_conf_file
+Fluentd pre script --> $fluentd_pre
 Fluentbit image used --> $fluentbit_image
-Gologfilewatcher image used --> $gologfilewatcher_image
+
 "
 }
 
@@ -131,11 +136,11 @@ deploy() {
   deploy_logstress $number_heavy_stress_containers $heavy_containers_msg_per_sec $number_low_stress_containers $low_containers_msg_per_sec
   deploy_gologfilewatcher "$gologfilewatcher_image"
   case "$collector" in
-    'fluentd') deploy_log_collector_fluentd "$fluentd_image" "$fluent_conf_file";;
+    'fluentd') deploy_log_collector_fluentd "$fluentd_image" "$fluent_conf_file" "$fluentd_pre";;
     'fluentbit') deploy_log_collector_fluentbit "$fluentbit_image" conf/collector/fluentbit/fluentbit.conf;;
-    'fluentd-loki') deploy_log_collector_fluentd "$fluentd_image" conf/collector/fluentd/loki/fluentd.conf;;
+    'fluentd-loki') deploy_log_collector_fluentd "$fluentd_image" conf/collector/fluentd/loki/fluentd.conf "$fluentd_pre";;
     'fluentbit-loki') deploy_log_collector_fluentbit "$fluentbit_image" conf/collector/fluentbit/loki/fluentbit.conf;;
-    'dual') deploy_log_collector_fluentd "$fluentd_image" conf/collector/fluentd/dual/fluentd.conf;
+    'dual') deploy_log_collector_fluentd "$fluentd_image" conf/collector/fluentd/dual/fluentd.conf "$fluentd_pre";
             deploy_log_collector_fluentbit "$fluentbit_image" conf/collector/fluentbit/dual/fluentbit.conf;;
     *) show_usage ;;
   esac
@@ -160,6 +165,7 @@ then
   gologfilewatcher_image="docker.io/cognetive/go-log-file-watcher-with-symlink-support-v0"
   fluentbit_image="fluent/fluent-bit:1.7-debug"
   collector="fluentd"
+  fluentd_pre=""
 
   for i in "$@"
   do
@@ -171,6 +177,7 @@ then
       -fi=*|--fimage=*) fluentd_image="${i#*=}"; shift ;;
       -bi=*|--bimage=*) fluentbit_image="${i#*=}"; shift ;;
       -gi=*|--gimage=*) gologfilewatcher_image="${i#*=}"; shift ;;
+      -fp=*|--fluentd_pre=*) fluentd_pre="${i#*=}"; shift ;;
       --nothing) nothing=true; shift ;;
       -h|--help|*) show_usage ;;
   esac

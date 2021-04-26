@@ -1,0 +1,11 @@
+gem list -d fluent-plugin-kubernetes_metadata_filter;
+gem uninstall fluent-plugin-kubernetes_metadata_filter;
+cd ~;
+rm -r fluent-plugin-kubernetes_metadata_filter;
+git clone https://github.com/fabric8io/fluent-plugin-kubernetes_metadata_filter.git;
+cd fluent-plugin-kubernetes_metadata_filter;
+git fetch origin pull/283/head;
+git checkout -b pull283 FETCH_HEAD;
+gem build fluent-plugin-kubernetes_metadata_filter.gemspec;
+gem install fluent-plugin-kubernetes_metadata_filter-2.6.0.gem;
+gem list -d fluent-plugin-kubernetes_metadata_filter;
