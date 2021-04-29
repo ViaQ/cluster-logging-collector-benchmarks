@@ -51,11 +51,12 @@ create_logstress_project() {
 
 # set credentials (allow privileged) 
 set_credentials() {
-  oc adm policy add-scc-to-user privileged -z default
-  oc adm policy add-cluster-role-to-user cluster-reader -z default
-  oc adm policy add-scc-to-group anyuid system:authenticated
-  oc patch scc restricted --type=json -p '[{"op": "replace", "path": "/allowHostDirVolumePlugin", "value":true}]'
-  oc patch scc restricted --type=json -p '[{"op": "replace", "path": "/allowPrivilegedContainer", "value":true}]'
+  echo "--> Setting credentials"
+  #oc adm policy add-scc-to-user privileged -z default
+  #oc adm policy add-cluster-role-to-user cluster-reader -z default
+  #oc adm policy add-scc-to-group anyuid system:authenticated
+  #oc patch scc restricted --type=json -p '[{"op": "replace", "path": "/allowHostDirVolumePlugin", "value":true}]'
+  #oc patch scc restricted --type=json -p '[{"op": "replace", "path": "/allowPrivilegedContainer", "value":true}]'
 }
 
 # deploy log stress containers
@@ -73,6 +74,9 @@ deploy_logstress() {
   rm -f log-stressor.zip
   rm -f log-stressor
 
+  oc adm policy add-scc-to-user privileged -z stress-service-account
+  oc delete --ignore-not-found=true deployment low-log-stress
+  oc delete --ignore-not-found=true deployment heavy-log-stress
   oc process -f $DEPLOY_YAML \
     -p number_heavy_stress_containers="$1" \
     -p heavy_containers_msg_per_sec="$2" \
@@ -94,6 +98,7 @@ deploy_log_collector_fluentd() {
   cp "$3" tmp/fluentd_pre.sh
   oc delete configmap --ignore-not-found=true fluentd-pre-sh
   oc create configmap fluentd-pre-sh --from-file=tmp/fluentd_pre.sh
+  oc adm policy add-scc-to-user privileged -z collector-service-account
   oc delete deployment --ignore-not-found=true fluentd
   oc process -f $DEPLOY_YAML \
     -p fluentd_image="$1" \
@@ -105,6 +110,7 @@ deploy_gologfilewatcher() {
 	DEPLOY_YAML=conf/expose_metrics/gologfilewatcher-template.yaml
 
 	echo "--> Deploying $DEPLOY_YAML -with ($1)"
+  oc adm policy add-scc-to-user privileged -z gologfilewatcher-service-account
 	oc process -f $DEPLOY_YAML \
 		-p gologfilewatcher_image="$1" \
 		| oc apply -f -
@@ -117,6 +123,8 @@ deploy_log_collector_fluentbit() {
   echo "--> Deploying $DEPLOY_YAML - with ($1)"
   oc delete configmap --ignore-not-found=true fluentbit-config
   oc create configmap fluentbit-config --from-file="$2" --from-file=conf/collector/fluentbit/fluentbit.parsers.conf --from-file=conf/collector/fluentbit/fluentbit.merge-crio-multiline.lua
+  oc adm policy add-scc-to-user privileged -z collector-service-account
+  oc delete deployment --ignore-not-found=true fluentbit
   oc process -f $DEPLOY_YAML \
     -p fluentbit_image="$1" \
     | oc apply -f -
@@ -137,13 +145,18 @@ deploy_capture_statistics() {
   oc create configmap check-logs-sequence-binary-zip --from-file=check-logs-sequence.zip
   rm -f check-logs-sequence.zip
   rm -f check-logs-sequence
+  oc adm policy add-scc-to-user privileged -z capturestatistics-service-account
+  oc adm policy add-cluster-role-to-user cluster-reader -z capturestatistics-service-account
+  oc delete deployment --ignore-not-found=true capturestatistics
   oc process -f $DEPLOY_YAML \
   -p number_of_log_lines_between_reports="$1" \
   | oc apply -f -
 }
 
 evacuate_node_for_performance_tests() {
+  echo "!!!!!!!!!!!!!!!!!!!!!!!!!!"
   echo "--> Evacuating $NODE_TO_USE"
+  echo "!!!!!!!!!!!!!!!!!!!!!!!!!!"
   oc get pods --all-namespaces -o wide | grep "$NODE_TO_USE"
   
   oc adm cordon "$NODE_TO_USE"
@@ -152,11 +165,11 @@ evacuate_node_for_performance_tests() {
 
 return_node_to_normal() {
   echo "--> Allow scheduling on $NODE_TO_USE"
-  oc adm uncordon "$NODE_TO_USE"
   while : ; do
     NODE_SCHEDULING_DISABLED=$(oc get nodes --selector='!node-role.kubernetes.io/master' | grep SchedulingDisabled)
     if [ -z "$NODE_SCHEDULING_DISABLED" ]; then break; fi
-    sleep 1
+    oc adm uncordon "$NODE_TO_USE"
+    sleep 30
   done
   oc get nodes --selector='!node-role.kubernetes.io/master'
 }

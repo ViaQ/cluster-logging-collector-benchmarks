@@ -3,6 +3,10 @@ kind: Template
 metadata:
   name: logstress
 objects:
+- apiVersion: v1
+  kind: ServiceAccount
+  metadata:
+    name: stress-service-account
 #
 # Deployment replicas of heavy-log-stress pods
 #
@@ -20,6 +24,7 @@ objects:
         labels:
           app: heavy-log-stress
       spec:
+        serviceAccountName: stress-service-account
         containers:
         - image: registry.fedoraproject.org/fedora
           securityContext:
@@ -67,6 +72,7 @@ objects:
         labels:
           app: low-log-stress
       spec:
+        serviceAccountName: stress-service-account
         containers:
         - image: registry.fedoraproject.org/fedora
           securityContext:

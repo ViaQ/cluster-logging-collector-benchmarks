@@ -32,7 +32,7 @@ initial_deploy() {
 
   export stress_profile="very-heavy"
   export evacuate_node="false"
-  export fluentd_image="docker.io/cognetive/origin-logging-fluentd:0.1"
+  export fluentd_image="quay.io/openshift/origin-logging-fluentd:latest"
   export fluent_conf_file="conf/collector/fluentd/fluentd.conf"
   export gologfilewatcher_image="docker.io/cognetive/go-log-file-watcher-with-symlink-support-v0"
   export fluentbit_image="fluent/fluent-bit:1.7-debug"

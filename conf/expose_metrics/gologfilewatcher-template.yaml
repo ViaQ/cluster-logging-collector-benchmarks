@@ -3,6 +3,10 @@ kind: Template
 metadata:
   name: gologfilewatcher
 objects:
+- apiVersion: v1
+  kind: ServiceAccount
+  metadata:
+    name: gologfilewatcher-service-account
 #
 # Deployment of gologfilewatcher log collector
 #
@@ -20,6 +24,7 @@ objects:
         labels:
           app: gologfilewatcher
       spec:
+        serviceAccountName: gologfilewatcher-service-account
         containers:
         - image: ${gologfilewatcher_image}
           securityContext:

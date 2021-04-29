@@ -3,6 +3,10 @@ kind: Template
 metadata:
   name: logcollector
 objects:
+- apiVersion: v1
+  kind: ServiceAccount
+  metadata:
+    name: collector-service-account
 #
 # Deployment of fluentd log collector
 #
@@ -20,6 +24,7 @@ objects:
         labels:
           app: fluentd
       spec:
+        serviceAccountName: collector-service-account
         containers:
         - image: ${fluentd_image}
           securityContext:

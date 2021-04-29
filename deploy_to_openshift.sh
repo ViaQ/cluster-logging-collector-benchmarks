@@ -12,6 +12,7 @@ usage: deploy_to_openshift [options]
     -fi, --fimage=[string]    Fluentd image to use (default: quay.io/openshift/origin-logging-fluentd:latest)
     -bi, --bimage=[string]    Fluentbit image to use (default: quay.io/openshift/origin-logging-fluentd:latest)
     -gi, --gimage=[string]    Gologfilewatcher image to use (default: docker.io/cognetive/go-log-file-watcher-driver-v0)
+    -gw, --gowatcher=[enum]   Deploy go watcher  (false, true  default: false)
     -fp, --fluentd_pre=[path] shell script to execute before fluentd starts (default =\"\")
 "
   exit 0
@@ -114,6 +115,7 @@ Low stress containers msg per second --> $low_containers_msg_per_sec
 Number of log lines between reports --> $number_of_log_lines_between_reports
 Maximum size of log file --> $maximum_logfile_size
 
+Deploy gowatcher --> $gowatcher
 Gologfilewatcher image used --> $gologfilewatcher_image
 
 Fluentd image used --> $fluentd_image
@@ -134,7 +136,7 @@ deploy() {
   create_logstress_project
   set_credentials
   deploy_logstress $number_heavy_stress_containers $heavy_containers_msg_per_sec $number_low_stress_containers $low_containers_msg_per_sec
-  deploy_gologfilewatcher "$gologfilewatcher_image"
+  if $gowatcher ; then deploy_gologfilewatcher "$gologfilewatcher_image"; fi
   case "$collector" in
     'fluentd') deploy_log_collector_fluentd "$fluentd_image" "$fluent_conf_file" "$fluentd_pre";;
     'fluentbit') deploy_log_collector_fluentbit "$fluentbit_image" conf/collector/fluentbit/fluentbit.conf;;
@@ -144,7 +146,7 @@ deploy() {
             deploy_log_collector_fluentbit "$fluentbit_image" conf/collector/fluentbit/dual/fluentbit.conf;;
     *) show_usage ;;
   esac
-  expose_metrics_to_prometheus
+  if $gowatcher ; then expose_metrics_to_prometheus; fi
   deploy_capture_statistics $number_of_log_lines_between_reports
   if $evacuate_node ; then evacuate_node_for_performance_tests; fi
 }
@@ -166,6 +168,7 @@ then
   fluentbit_image="fluent/fluent-bit:1.7-debug"
   collector="fluentd"
   fluentd_pre=""
+  gowatcher="false"
 
   for i in "$@"
   do
@@ -176,6 +179,7 @@ then
       -fc=*|--fluentconf=*) fluent_conf_file="${i#*=}"; shift ;;
       -fi=*|--fimage=*) fluentd_image="${i#*=}"; shift ;;
       -bi=*|--bimage=*) fluentbit_image="${i#*=}"; shift ;;
+      -gw=*|--gowatcher=*) gowatcher="${i#*=}"; shift ;;
       -gi=*|--gimage=*) gologfilewatcher_image="${i#*=}"; shift ;;
       -fp=*|--fluentd_pre=*) fluentd_pre="${i#*=}"; shift ;;
       --nothing) nothing=true; shift ;;

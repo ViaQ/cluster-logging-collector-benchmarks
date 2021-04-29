@@ -3,6 +3,10 @@ kind: Template
 metadata:
   name: capturestatistics
 objects:
+- apiVersion: v1
+  kind: ServiceAccount
+  metadata:
+    name: capturestatistics-service-account
 #
 # Deployment of fluentd log collector
 #
@@ -20,6 +24,7 @@ objects:
         labels:
           app: capturestatistics
       spec:
+        serviceAccountName: capturestatistics-service-account
         containers:
         - image: registry.fedoraproject.org/fedora
           securityContext:
