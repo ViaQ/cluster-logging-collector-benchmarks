@@ -1,0 +1,13 @@
+gem list -d fluent-plugin-viaq_data_model;
+gem uninstall fluent-plugin-viaq_data_model;
+cd ~ || exit;
+rm -f -r origin-aggregated-logging;
+git clone https://github.com/openshift/origin-aggregated-logging.git;
+cd origin-aggregated-logging || exit;
+git fetch origin pull/2117/head;
+git checkout -b pull2117 FETCH_HEAD;
+cd fluentd/lib/fluent-plugin-viaq_data_model || exit;
+gem build fluent-plugin-viaq_data_model.gemspec;
+gem install fluent-plugin-viaq_data_model-0.0.22.gem;
+gem list -d fluent-plugin-viaq_data_model;
+export VIAQ_DATA_MODEL_EXIT_IMMEDIATELY=true;
