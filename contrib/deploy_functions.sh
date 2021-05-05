@@ -88,7 +88,7 @@ deploy_logstress() {
 # deploy log collector (fluentd) container
 deploy_log_collector_fluentd() {
   DEPLOY_YAML=conf/collector/fluentd/fluentd-template.yaml
-
+  mkdir -p tmp
   echo "--> Deploying $DEPLOY_YAML - with ($1 $2 $3)"
   rm -f tmp/fluentd.conf
   cp "$2" tmp/fluentd.conf
@@ -138,6 +138,7 @@ deploy_capture_statistics() {
   rm -f check-logs-sequence.zip
   rm -f check-logs-sequence
   go get -u github.com/papertrail/go-tail
+  go get github.com/sirupsen/logrus
   go env -w GO111MODULE=auto
   go build -ldflags "-s -w" go/check-logs-sequence/check-logs-sequence.go
   zip check-logs-sequence.zip  check-logs-sequence
