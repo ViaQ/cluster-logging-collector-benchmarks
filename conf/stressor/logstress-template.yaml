@@ -40,7 +40,8 @@ objects:
               yum install -y procps;
               yum install -y unzip;
               unzip /go/bin/log-stressor.zip;
-              ./log-stressor --msgpersec=${heavy_containers_msg_per_sec}  ;
+              unzip /go/data/data.zip;
+              ./log-stressor --msgpersec=${heavy_containers_msg_per_sec}  --datafile=${datafile} ;
               echo ".";
               echo "NEVER GET HERE --> this code is for future performance testing";
               echo ".";
@@ -51,10 +52,16 @@ objects:
           volumeMounts:
             - name: log-stressor
               mountPath: /go/bin
+            - name: data
+              mountPath: /go/data
         volumes:
           - name: log-stressor
             configMap:
               name: log-stressor-binary-zip
+          - name: data
+            configMap:
+              name: data-binary-zip
+#
 #
 # Deployment replicas of low-log-stress pods
 #
@@ -88,7 +95,8 @@ objects:
               yum install -y procps;
               yum install -y unzip;
               unzip /go/bin/log-stressor.zip;
-              ./log-stressor --msgpersec=${low_containers_msg_per_sec}  ;
+              unzip /go/data/data.zip;
+              ./log-stressor --msgpersec=${low_containers_msg_per_sec} --datafile=${datafile} ;
               echo ".";
               echo "NEVER GET HERE --> this code is for future performance testing";
               echo ".";
@@ -99,13 +107,19 @@ objects:
           volumeMounts:
             - name: log-stressor
               mountPath: /go/bin
+            - name: data
+              mountPath: /go/data
         volumes:
           - name: log-stressor
             configMap:
               name: log-stressor-binary-zip
+          - name: data
+            configMap:
+              name: data-binary-zip
+
 parameters:
 - name: number_heavy_stress_containers
 - name: heavy_containers_msg_per_sec
 - name: number_low_stress_containers
 - name: low_containers_msg_per_sec
-
+- name: datafile

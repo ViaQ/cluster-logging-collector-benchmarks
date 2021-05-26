@@ -13,6 +13,7 @@ usage: deploy_to_openshift [options]
     -bi, --bimage=[string]    Fluentbit image to use (default: quay.io/openshift/origin-logging-fluentd:latest)
     -gi, --gimage=[string]    Gologfilewatcher image to use (default: docker.io/cognetive/go-log-file-watcher-driver-v0)
     -gw, --gowatcher=[enum]   Deploy go watcher  (false, true  default: false)
+    -df, --datafile=[enum]    Use data file to generate workload logs  (false, true  default: false)
     -fp, --fluentd_pre=[path] shell script to execute before fluentd starts (default =\"\")
 "
   exit 0
@@ -50,6 +51,14 @@ select_stress_profile() {
         low_containers_msg_per_sec=10;
         number_of_log_lines_between_reports=1000;
         maximum_logfile_size=1048576;
+        ;;
+      "experiment")
+        number_heavy_stress_containers=0;
+        heavy_containers_msg_per_sec=0;
+        number_low_stress_containers=20;
+        low_containers_msg_per_sec=20000;
+        number_of_log_lines_between_reports=100;
+        maximum_logfile_size=10485760;
         ;;
       "medium")
         number_heavy_stress_containers=2;
@@ -117,6 +126,7 @@ Maximum size of log file --> $maximum_logfile_size
 
 Deploy gowatcher --> $gowatcher
 Gologfilewatcher image used --> $gologfilewatcher_image
+Use data file --> $datafile
 
 Fluentd image used --> $fluentd_image
 Fluentd conf used --> $fluent_conf_file
@@ -135,7 +145,7 @@ deploy() {
   delete_logstress_project_if_exists
   create_logstress_project
   set_credentials
-  deploy_logstress $number_heavy_stress_containers $heavy_containers_msg_per_sec $number_low_stress_containers $low_containers_msg_per_sec
+  deploy_logstress $number_heavy_stress_containers $heavy_containers_msg_per_sec $number_low_stress_containers $low_containers_msg_per_sec $datafile
   if $gowatcher ; then deploy_gologfilewatcher "$gologfilewatcher_image"; fi
   case "$collector" in
     'fluentd') deploy_log_collector_fluentd "$fluentd_image" "$fluent_conf_file" "$fluentd_pre";;
@@ -169,6 +179,7 @@ then
   collector="fluentd"
   fluentd_pre=""
   gowatcher="false"
+  datafile="false"
 
   for i in "$@"
   do
@@ -180,6 +191,7 @@ then
       -fi=*|--fimage=*) fluentd_image="${i#*=}"; shift ;;
       -bi=*|--bimage=*) fluentbit_image="${i#*=}"; shift ;;
       -gw=*|--gowatcher=*) gowatcher="${i#*=}"; shift ;;
+      -df=*|--datafile=*) datafile="${i#*=}"; shift ;;
       -gi=*|--gimage=*) gologfilewatcher_image="${i#*=}"; shift ;;
       -fp=*|--fluentd_pre=*) fluentd_pre="${i#*=}"; shift ;;
       --nothing) nothing=true; shift ;;
