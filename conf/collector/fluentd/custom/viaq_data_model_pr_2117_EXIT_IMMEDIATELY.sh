@@ -1,0 +1,11 @@
+mv /etc/fluent/plugin/filter_viaq_data_model.rb /etc/fluent/plugin/filter_viaq_data_model.rb.original;
+cd ~;
+rm -f -r origin-aggregated-logging;
+git clone https://github.com/openshift/origin-aggregated-logging.git;
+cd origin-aggregated-logging;
+git fetch origin pull/2117/head;
+git checkout -b pull2117 FETCH_HEAD;
+cd fluentd/lib/fluent-plugin-viaq_data_model;
+cp lib/fluent/plugin/filter_viaq_data_model.rb /etc/fluent/plugin/filter_viaq_data_model.rb;
+export VIAQ_DATA_MODEL_EXIT_IMMEDIATELY=true;
+echo "VIAQ_DATA_MODEL_EXIT_IMMEDIATELY is $VIAQ_DATA_MODEL_EXIT_IMMEDIATELY";
