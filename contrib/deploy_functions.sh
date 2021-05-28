@@ -66,19 +66,18 @@ deploy_logstress() {
   echo "--> Deploying $DEPLOY_YAML - with ($1 $2 $3 $4 $5)"
   rm -f log-stressor.zip
   rm -f log-stressor
-  rm -f data.zip
+  rm -f log-samples.zip
   go env -w GO111MODULE=auto
   go build -ldflags "-s -w" go/log-stressor/log-stressor.go
-  zip log-stressor.zip  log-stressor
-  zip -j data.zip go/check-logs-sequence/samples.log
-  oc delete configmap --ignore-not-found=true data-binary-zip
+  zip -j log-stressor.zip  log-stressor
+  zip -j log-samples.zip go/check-logs-sequence/samples.log
+  oc delete configmap --ignore-not-found=true log-samples-binary-zip
   oc delete configmap --ignore-not-found=true log-stressor-binary-zip
   oc create configmap log-stressor-binary-zip --from-file=log-stressor.zip
-  oc create configmap data-binary-zip --from-file=data.zip
-  rm -f data.zip
+  oc create configmap log-samples-binary-zip --from-file=log-samples.zip
+  rm -f log-samples.zip
   rm -f log-stressor.zip
   rm -f log-stressor
-  rm -f samples.log
 
   oc adm policy add-scc-to-user privileged -z stress-service-account
   oc delete --ignore-not-found=true deployment low-log-stress
@@ -88,7 +87,7 @@ deploy_logstress() {
     -p heavy_containers_msg_per_sec="$2" \
     -p number_low_stress_containers="$3" \
     -p low_containers_msg_per_sec="$4" \
-    -p datafile="$5" \
+    -p use_log_samples="$5" \
     | oc apply -f -
 }
 
@@ -148,7 +147,7 @@ deploy_capture_statistics() {
   go get github.com/sirupsen/logrus
   go env -w GO111MODULE=auto
   go build -ldflags "-s -w" go/check-logs-sequence/check-logs-sequence.go
-  zip check-logs-sequence.zip  check-logs-sequence
+  zip -j check-logs-sequence.zip  check-logs-sequence
   oc delete configmap --ignore-not-found=true check-logs-sequence-binary-zip
   oc create configmap check-logs-sequence-binary-zip --from-file=check-logs-sequence.zip
   rm -f check-logs-sequence.zip
