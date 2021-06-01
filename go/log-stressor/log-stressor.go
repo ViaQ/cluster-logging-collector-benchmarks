@@ -1,12 +1,13 @@
 package main
 
 import (
-	"flag"
-	"fmt"
-	"log"
-	"math/rand"
-	"os"
-	"time"
+    "flag"
+    "fmt"
+    "log"
+    "math/rand"
+    "time"
+    "bufio"
+    "os"
 )
 
 const (
@@ -14,6 +15,48 @@ const (
 	numberOfBursts       = 10
 	letterBytes          = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 )
+
+func ReadFile(fileName string)[] string {
+
+    readFile, err := os.Open(fileName)
+
+	if err != nil {
+		log.Fatalf("failed to open file: %s", err)
+	}
+
+	fileScanner := bufio.NewScanner(readFile)
+	fileScanner.Split(bufio.ScanLines)
+	var fileTextLines []string
+
+	for fileScanner.Scan() {
+		fileTextLines = append(fileTextLines, fileScanner.Text())
+	}
+
+	readFile.Close()
+    return fileTextLines
+}
+
+func GetLogLinesFromFile()[]string{
+	var loglines []string
+	fileName := "samples.log"
+	loglines = ReadFile(fileName)
+	return loglines
+}
+
+func GetRandomLogline(loglines []string) string{
+    index := rand.Intn(len(loglines))
+    return loglines[index]
+}
+
+func GetPayload(opt Options, loglines []string) string{
+	payload := ""
+	if opt.use_log_samples == "true" {
+		payload = GetRandomLogline(loglines)
+	}else{
+		payload = RandStringBytes(opt.payloadSize)
+	}
+	return payload
+}
 
 func RandStringBytes(n int) string {
 	b := make([]byte, n)
@@ -31,6 +74,7 @@ type Options struct {
 	totMessages       int
 	outputFormat      string
 	outputFile        string
+	use_log_samples   string
 }
 
 func main() {
@@ -44,6 +88,7 @@ func main() {
 	flag.IntVar(&opt.payloadSize, "payload_size", 100, "Payload length [int] (default = 100)")
 	flag.IntVar(&opt.messagesPerSecond, "msgpersec", 1, "Number of messages per second (default = 1)")
 	flag.IntVar(&opt.totMessages, "totMessages", 1, "Total number of messages (only applicable for 'fixed' payload-gen")
+	flag.StringVar(&opt.use_log_samples, "use_log_samples", "false", "Use log samples or not [enum] (default = false)")
 
 	flag.Parse()
 
@@ -59,16 +104,21 @@ func main() {
 
 type DistributionProfile func(format formatter, hash string, opt Options)
 
-//FixedFixedProfile produces a fixed number of messages with a constant distribution?
-func FixedFixedProfile(format formatter, hash string, opt Options) {
+//FiniteFixedProfile produces a fixed number of messages with a constant distribution?
+func FiniteFixedProfile(format formatter, hash string, opt Options) {
+    
+	loglines := GetLogLinesFromFile()
+
 	for i := 0; i < opt.totMessages; i++ {
-		payload := RandStringBytes(opt.payloadSize)
+		payload := GetPayload(opt, loglines)
 		format(hash, i, payload)
 	}
 }
 
 //ConstantFixedProfile produces a constant stream of fixed messages
 func ConstantFixedProfile(format formatter, hash string, opt Options) {
+	loglines := GetLogLinesFromFile()
+
 	bursts := 1
 	if opt.messagesPerSecond > minBurstMessageCount {
 		bursts = numberOfBursts
@@ -77,7 +127,7 @@ func ConstantFixedProfile(format formatter, hash string, opt Options) {
 	startTime := time.Now().Unix() - 1
 	for {
 		for i := 0; i < opt.messagesPerSecond/bursts; i++ {
-			payload := RandStringBytes(opt.payloadSize)
+			payload := GetPayload(opt, loglines)
 			format(hash, messageCount, payload)
 			messageCount++
 		}
@@ -96,7 +146,7 @@ func NewDistributionProfile(payloadGen, distribution string) DistributionProfile
 	profile := payloadGen + "/" + distribution
 	switch profile {
 	case "fixed/fixed":
-		return FixedFixedProfile
+		return FiniteFixedProfile
 	default:
 		return ConstantFixedProfile
 	}
