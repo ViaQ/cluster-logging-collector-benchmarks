@@ -48,6 +48,10 @@ Another example using fluentd with specific configuration (partial CLO configura
 
 > Note: make sure to use the sign `=` between each command-line key and value
 
+### Vector Configuration
+Note any vector configuration that utilizes a "kubernetes_log" source must additionally have a transform to modify "file" to "path" as
+in the default configuration.  Capturing statistics will otherwise not measure log information.
+
 ## Typical deployment
 
 Typical deployment of the benchmark components on OpenShift cluster looks like this: 
