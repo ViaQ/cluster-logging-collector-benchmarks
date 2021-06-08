@@ -46,7 +46,7 @@ objects:
             OUTPUT_FILE=/var/log/containers/stress.log;
             echo -e "\nOutput log file is: $OUTPUT_FILE\n";
             touch $OUTPUT_FILE;
-            ./check-logs-sequence -f $OUTPUT_FILE -c ${number_of_log_lines_between_reports} &
+            ./check-logs-sequence -f $OUTPUT_FILE -c ${number_of_log_lines_between_reports} -l ${check_log_level} &
             echo ".";
             while true; do
               echo "====> Top information on: $(date)";
@@ -73,3 +73,5 @@ objects:
         hostPID: true
 parameters:
   - name: number_of_log_lines_between_reports
+  - name: check_log_level
+    value: fatal

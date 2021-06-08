@@ -23,6 +23,7 @@ objects:
       metadata:
         labels:
           app: heavy-log-stress
+          type: log-stressor
       spec:
         serviceAccountName: stress-service-account
         containers:
@@ -78,6 +79,7 @@ objects:
       metadata:
         labels:
           app: low-log-stress
+          type: log-stressor
       spec:
         serviceAccountName: stress-service-account
         containers:
