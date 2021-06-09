@@ -4,14 +4,17 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	"github.com/papertrail/go-tail/follower"
-	log "github.com/sirupsen/logrus"
 	"io"
 	"os"
 	"sort"
 	"strconv"
 	"strings"
 	"time"
+
+	"encoding/json"
+
+	"github.com/papertrail/go-tail/follower"
+	log "github.com/sirupsen/logrus"
 )
 
 type logSourceInfo struct {
@@ -34,11 +37,13 @@ func main() {
 	var fluentLogFileName string
 	var reportCount int64
 	var logLevel string
+	var reportFormat string
 	var seekFrom int
 
 	flag.StringVar(&fluentLogFileName, "f", "0.log", "fluent log file to tail")
 	flag.Int64Var(&reportCount, "c", 100, "number of logs between reports")
 	flag.StringVar(&logLevel, "l", "fatal", "Logging level e.g debug, info")
+	flag.StringVar(&reportFormat, "rf", "default", "Report format: ndjson, default")
 	flag.IntVar(&seekFrom, "s", io.SeekEnd, "Tail seek from: 2 - end , 1 - current, 0 - start")
 	flag.Parse()
 
@@ -49,6 +54,11 @@ func main() {
 		lvl = log.FatalLevel
 	}
 	log.SetLevel(lvl)
+
+	report := defaultReporter
+	if *&reportFormat == "ndjson" {
+		report = ndjsonReporter
+	}
 
 	logsCurrentInfo := make(map[string]logSourceInfo)
 	logsTotalInfo := make(map[string]logSourceInfo)
@@ -234,8 +244,48 @@ func parseLine(line string) (err error, name string, seq int64, logTag string, h
 	hashID = strings.TrimSpace(logSliced[1])
 	return nil, name, seq, logTag, hashID
 }
+func ndjsonReporter(reportData reportStatistics, logsCurrentInfo map[string]logSourceInfo, logsTotalInfo map[string]logSourceInfo) {
+	now := time.Now()
+	deltaTimeInSeconds := now.Unix() - reportData.startMonitoringTime.Unix()
+	summary := map[string]interface{}{}
+	summary["time"] = now.Format(time.RFC3339)
+	if !reportData.startMonitoringTime.IsZero() {
+		summary["timeFromStartMonitoringSec"] = deltaTimeInSeconds
+		summary["totLogsCollected"] = reportData.totalLogsCollectedCount
+		summary["totLogsCollectedPerSec"] = reportData.totalLogsCollectedCount / deltaTimeInSeconds
+		summary["totalLogsSkipped"] = reportData.totalLogsSkippedCount
+	}
 
-func report(reportData reportStatistics, logsCurrentInfo map[string]logSourceInfo, logsTotalInfo map[string]logSourceInfo) {
+	apps := []interface{}{}
+	for name, totalEntry := range logsTotalInfo {
+		pod := map[string]interface{}{}
+		entry := logsCurrentInfo[name]
+		pod["container"] = name
+		pod["currentLogged"] = entry.loggedCount
+		pod["currentCollected"] = entry.collectedCount
+		pod["currentLoss"] = entry.loggedCount - entry.collectedCount
+		pod["totalLoggedPerSec"] = totalEntry.loggedCount / deltaTimeInSeconds
+		pod["totalLogged"] = totalEntry.loggedCount
+		pod["totalCollected"] = totalEntry.collectedCount
+		pod["totalCollectedPerSec"] = totalEntry.collectedCount / deltaTimeInSeconds
+		pod["totalLoss"] = totalEntry.loggedCount - totalEntry.collectedCount
+
+		apps = append(apps, pod)
+	}
+
+	stats := map[string]interface{}{
+		"apps":    apps,
+		"summary": summary,
+	}
+	ndjson, err := json.Marshal(stats)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	fmt.Printf("%s\n", ndjson)
+}
+
+func defaultReporter(reportData reportStatistics, logsCurrentInfo map[string]logSourceInfo, logsTotalInfo map[string]logSourceInfo) {
 	now := time.Now()
 	deltaTimeInSeconds := now.Unix() - reportData.startMonitoringTime.Unix()
 	fmt.Printf("Report at: %s\n", now.String())
