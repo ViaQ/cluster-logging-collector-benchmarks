@@ -153,6 +153,9 @@ deploy_log_collector_vector() {
 # deploy capture statistics container
 deploy_capture_statistics() {
   DEPLOY_YAML=conf/monitor/capture-statistics-template.yaml
+  if [ "$2" == "ndjson" ] ; then
+    DEPLOY_YAML=conf/monitor/capture-statistics-template-ndjson.yaml
+  fi
 
   echo "--> Deploying $DEPLOY_YAML - with ($1)"
   rm -f check-logs-sequence.zip
@@ -171,6 +174,7 @@ deploy_capture_statistics() {
   oc delete deployment --ignore-not-found=true capturestatistics
   oc process -f $DEPLOY_YAML \
   -p number_of_log_lines_between_reports="$1" \
+  -p report_interval="$3" \
   | oc apply -f -
 }
 

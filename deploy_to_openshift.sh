@@ -17,6 +17,8 @@ usage: deploy_to_openshift [options]
     -gw, --gowatcher=[enum]    Deploy go watcher  (false, true  default: false)
     -lf, --use_log_samples=[enum]   Use log samples to generate workload logs  (false, true  default: false)
     -fp, --fluentd_pre=[path]  shell script to execute before fluentd starts (default =\"\")
+    -of, --output_format=[enum] Output format: (ndjson, default: default)
+    -ri, --report_interval     Report Interval (default: 120)
 "
   exit 0
 }
@@ -129,6 +131,7 @@ Maximum size of log file --> $maximum_logfile_size
 Deploy gowatcher --> $gowatcher
 Gologfilewatcher image used --> $gologfilewatcher_image
 Use logsample file --> $use_log_samples
+Output Format --> $output_format
 
 Fluentd image used --> $fluentd_image
 Fluentd conf used --> $fluent_conf_file
@@ -160,7 +163,7 @@ deploy() {
     *) show_usage ;;
   esac
   if $gowatcher ; then expose_metrics_to_prometheus; fi
-  deploy_capture_statistics $number_of_log_lines_between_reports
+  deploy_capture_statistics $number_of_log_lines_between_reports $output_format $report_interval
   if $evacuate_node ; then evacuate_node_for_performance_tests; fi
 }
 
@@ -185,6 +188,8 @@ then
   fluentd_pre=""
   gowatcher="false"
   use_log_samples="false"
+  output_format="default"
+  report_interval="120"
 
   for i in "$@"
   do
@@ -201,6 +206,8 @@ then
       -lf=*|--use_log_samples=*) use_log_samples="${i#*=}"; shift ;;
       -gi=*|--gimage=*) gologfilewatcher_image="${i#*=}"; shift ;;
       -fp=*|--fluentd_pre=*) fluentd_pre="${i#*=}"; shift ;;
+      -of=*|--output_format=*) output_format="${i#*=}"; shift ;;
+      -ri=*|--report_interval=*) report_interval="${i#*=}"; shift ;;
       --nothing) nothing=true; shift ;;
       -h|--help|*) show_usage ;;
   esac
