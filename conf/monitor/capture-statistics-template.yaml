@@ -37,6 +37,7 @@ objects:
           args:
           - -c
           - >
+            echo "=== setup-begin ===";
             yum install -y procps;
             yum install -y unzip;
             curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl";
@@ -46,16 +47,22 @@ objects:
             OUTPUT_FILE=/var/log/containers/stress.log;
             echo -e "\nOutput log file is: $OUTPUT_FILE\n";
             touch $OUTPUT_FILE;
-            ./check-logs-sequence -f $OUTPUT_FILE -c ${number_of_log_lines_between_reports} -l ${check_log_level} &
-            echo ".";
+            output_format=${output_format};
+            ./check-logs-sequence -rf $output_format -f $OUTPUT_FILE -c ${number_of_log_lines_between_reports} -l ${check_log_level} &
+            echo "=== setup-end ===";
             while true; do
-              echo "====> Top information on: $(date)";
-              COLUMNS=1000 top -b -n 1 -o +%CPU | sed 1,6d | awk '{print $9"\t|\t"$10"\t|\t"$12}' | column -t | head -n 20;
-              echo "=============";
-              echo "====> K8S Top information";
-              ./kubectl top pod --namespace="logstress" --sort-by="cpu" --use-protocol-buffers | head -n 20;
-              ./kubectl top pod --namespace="loki" --sort-by="cpu" --use-protocol-buffers | head -n 20;
-              echo "=============";
+              if [ $output_format = "ndjson" ]; then
+                echo "$(./kubectl top pods --namespace="logstress" --use-protocol-buffers | head -n 20 | grep -v NAME)" | \
+                  python3 -c 'import sys,datetime;a=[];[a.append({"container":l.split()[0],"cpu":l.split()[1],"mem":l.split()[2]}) for l in sys.stdin];summary={"time":datetime.datetime.now().strftime("%Y-%m-%dT%H:%M:%S.%f3")};print({"summary":summary,"resources":a})'
+              else
+                echo "====> Top information on: $(date)";
+                COLUMNS=1000 top -b -n 1 -o +%CPU | sed 1,6d | awk '{print $9"\t|\t"$10"\t|\t"$12}' | column -t | head -n 20;
+                echo "=============";
+                echo "====> K8S Top information";
+                ./kubectl top pod --namespace="logstress" --sort-by="cpu" --use-protocol-buffers | head -n 20;
+                ./kubectl top pod --namespace="loki" --sort-by="cpu" --use-protocol-buffers | head -n 20;
+                echo "=============";
+              fi
               sleep ${report_interval};
             done;        
           volumeMounts:
@@ -77,3 +84,5 @@ parameters:
     value: fatal
   - name: report_interval
     value: "120"
+  - name: output_format
+    value: "default"

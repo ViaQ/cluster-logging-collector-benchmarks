@@ -97,13 +97,12 @@ deploy_log_collector_fluentd() {
   mkdir -p tmp
   echo "--> Deploying $DEPLOY_YAML - with ($1 $2 $3)"
   rm -f tmp/fluentd.conf
-  cp "$2" tmp/fluentd.conf
   oc delete configmap --ignore-not-found=true fluentd-config
-  oc create configmap fluentd-config --from-file=tmp/fluentd.conf
+  oc create configmap fluentd-config --from-file=fluentd.conf="$2"
   echo "" > tmp/fluentd_pre.sh
   cp "$3" tmp/fluentd_pre.sh
   oc delete configmap --ignore-not-found=true fluentd-pre-sh
-  oc create configmap fluentd-pre-sh --from-file=tmp/fluentd_pre.sh
+  oc create configmap fluentd-pre-sh --from-file=fluentd_pre.sh=tmp/fluentd_pre.sh
   oc adm policy add-scc-to-user privileged -z collector-service-account
   oc delete deployment --ignore-not-found=true fluentd
   oc process -f $DEPLOY_YAML \
@@ -128,7 +127,7 @@ deploy_log_collector_fluentbit() {
 
   echo "--> Deploying $DEPLOY_YAML - with ($1)"
   oc delete configmap --ignore-not-found=true fluentbit-config
-  oc create configmap fluentbit-config --from-file="$2" --from-file=conf/collector/fluentbit/fluentbit.parsers.conf --from-file=conf/collector/fluentbit/fluentbit.merge-crio-multiline.lua
+  oc create configmap fluentbit-config --from-file=fluentbit.conf="$2" --from-file=conf/collector/fluentbit/fluentbit.parsers.conf --from-file=conf/collector/fluentbit/fluentbit.lua
   oc adm policy add-scc-to-user privileged -z collector-service-account
   oc delete deployment --ignore-not-found=true fluentbit
   oc process -f $DEPLOY_YAML \
@@ -153,11 +152,7 @@ deploy_log_collector_vector() {
 # deploy capture statistics container
 deploy_capture_statistics() {
   DEPLOY_YAML=conf/monitor/capture-statistics-template.yaml
-  if [ "$2" == "ndjson" ] ; then
-    DEPLOY_YAML=conf/monitor/capture-statistics-template-ndjson.yaml
-  fi
-
-  echo "--> Deploying $DEPLOY_YAML - with ($1)"
+  echo "--> Deploying $DEPLOY_YAML - with ($1 $2 $3)"
   rm -f check-logs-sequence.zip
   rm -f check-logs-sequence
   go get -u github.com/papertrail/go-tail
@@ -174,6 +169,7 @@ deploy_capture_statistics() {
   oc delete deployment --ignore-not-found=true capturestatistics
   oc process -f $DEPLOY_YAML \
   -p number_of_log_lines_between_reports="$1" \
+  -p output_format="$2" \
   -p report_interval="$3" \
   | oc apply -f -
 }
