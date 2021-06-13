@@ -1,0 +1,45 @@
+[sources.kube]
+  type = "kubernetes_logs"
+  auto_partial_merge = true
+  exclude_paths_glob_patterns = ["/var/log/containers/*_openshift-logging_*.log"]
+  extra_label_selector = "type=log-stressor"
+[transforms.normalize]
+ type = "remap"
+ inputs = ["kube"]
+ source = '''
+   level = "unknown"
+   if match(.message,r'(Warning|WARN|W[0-9]+|level=warn|Value:warn|"level":"warn")'){
+     level = "warn"
+   } else if match(.message, r'Info|INFO|I[0-9]+|level=info|Value:info|"level":"info"'){
+     level = "info"
+   } else if match(.message, r'Error|ERROR|E[0-9]+|level=error|Value:error|"level":"error"'){
+     level = "error"
+   } else if match(.message, r'Debug|DEBUG|D[0-9]+|level=debug|Value:debug|"level":"debug"'){
+     level = "debug"
+   }
+   .level = level
+   
+   .pipeline_metadata.collector.name = "vector"
+   .pipeline_metadata.collector.version = "someversion"
+   ip4, err = get_env_var("NODE_IPV4")
+   .pipeline_metadata.collector.ipaddr4 = ip4
+   received, err = format_timestamp(now(),"%+")
+   .pipeline_metadata.collector.received_at = received
+   .pipeline_metadata.collector.error = err
+   
+   file = del(.file)
+   meta = parse_regex!(file,r'(?:/var/log/pods/)(?P<ns>.*)_(?P<pn>.*)_(?P<uuid>.*)/(?P<cn>.*)/[0,1]\.log')
+   .path = "/var/log/containers/" + meta.pn + "_" + meta.ns + "_" + meta.uuid + ".log"
+
+ '''
+[transforms.ocp_sys]
+  type = "route" 
+  inputs = ["normalize"]
+  route.infra = 'starts_with!(.kubernetes.pod_namespace,"kube") || starts_with!(.kubernetes.pod_namespace,"openshift") || .kubernetes.pod_namespace == "default"'
+  route.app = '!(starts_with!(.kubernetes.pod_namespace,"kube") && starts_with!(.kubernetes.pod_namespace,"openshift") && .kubernetes.pod_namespace == "default")'
+
+[sinks.stress]
+  type="file"
+  inputs = ["ocp_sys.infra","ocp_sys.app"]
+  encoding.codec = "ndjson"
+  path = "/var/log/containers/stress.log"

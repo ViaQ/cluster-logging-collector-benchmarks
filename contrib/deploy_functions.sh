@@ -136,9 +136,26 @@ deploy_log_collector_fluentbit() {
     | oc apply -f -
 }
 
+# deploy log collector (vector) container
+deploy_log_collector_vector() {
+  DEPLOY_YAML=conf/collector/vector/collector-template.yaml
+
+  echo "--> Deploying $DEPLOY_YAML - with ($1)"
+  oc delete configmap --ignore-not-found=true collector
+  oc create configmap collector --from-file=vector.toml="$2"
+  oc adm policy add-scc-to-user privileged -z collector-service-account
+  oc delete deployment --ignore-not-found=true collector
+  oc process -f $DEPLOY_YAML \
+    -p image_name="$1" \
+    | oc apply -f -
+}
+
 # deploy capture statistics container
 deploy_capture_statistics() {
   DEPLOY_YAML=conf/monitor/capture-statistics-template.yaml
+  if [ "$2" == "ndjson" ] ; then
+    DEPLOY_YAML=conf/monitor/capture-statistics-template-ndjson.yaml
+  fi
 
   echo "--> Deploying $DEPLOY_YAML - with ($1)"
   rm -f check-logs-sequence.zip
@@ -157,6 +174,7 @@ deploy_capture_statistics() {
   oc delete deployment --ignore-not-found=true capturestatistics
   oc process -f $DEPLOY_YAML \
   -p number_of_log_lines_between_reports="$1" \
+  -p report_interval="$3" \
   | oc apply -f -
 }
 

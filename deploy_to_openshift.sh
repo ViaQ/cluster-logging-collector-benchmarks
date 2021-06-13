@@ -4,17 +4,21 @@ show_usage() {
   echo "
 usage: deploy_to_openshift [options]
   options:
-    -h,  --help               Show usage
-    -e,  --evacuate=[enum]    Evacuate node  (false, true  default: false)
-    -p,  --profile=[enum]     Stress profile (no-stress, very-light, light, medium, heavy, very-heavy, heavy-loss, very-heavy  default: very-light)
-    -c,  --collector=[enum]   Logs collector (fluentd, fluentbit, fluentd-loki, fluentbit-loki, dual default: fluentd)
-    -fc, --fluentconf=[enum]  fluent conf file (default: conf/collector/fluentd/fluentd.conf)
-    -fi, --fimage=[string]    Fluentd image to use (default: quay.io/openshift/origin-logging-fluentd:latest)
-    -bi, --bimage=[string]    Fluentbit image to use (default: quay.io/openshift/origin-logging-fluentd:latest)
-    -gi, --gimage=[string]    Gologfilewatcher image to use (default: docker.io/cognetive/go-log-file-watcher-driver-v0)
-    -gw, --gowatcher=[enum]   Deploy go watcher  (false, true  default: false)
+    -h,  --help                Show usage
+    -e,  --evacuate=[enum]     Evacuate node  (false, true  default: false)
+    -p,  --profile=[enum]      Stress profile (no-stress, very-light, light, medium, heavy, very-heavy, heavy-loss, very-heavy  default: very-light)
+    -c,  --collector=[enum]    Logs collector (fluentd, fluentbit, fluentd-loki, fluentbit-loki, dual, vector default: fluentd)
+    -fc, --fluentconf=[enum]   fluent conf file (default: conf/collector/fluentd/fluentd.conf)
+    -fi, --fimage=[string]     Fluentd image to use (default: quay.io/openshift/origin-logging-fluentd:latest)
+    -bi, --bimage=[string]     Fluentbit image to use (default: quay.io/openshift/origin-logging-fluentd:latest)
+    -vi, --vimage=[string]     Vector image to use (default: quay.io/dciancio/vector:latest)
+    -vc, --vectorconf=[string] Vector config to use (default: conf/collector/vector/vector-clf.toml)
+    -gi, --gimage=[string]     Gologfilewatcher image to use (default: docker.io/cognetive/go-log-file-watcher-driver-v0)
+    -gw, --gowatcher=[enum]    Deploy go watcher  (false, true  default: false)
     -lf, --use_log_samples=[enum]   Use log samples to generate workload logs  (false, true  default: false)
-    -fp, --fluentd_pre=[path] shell script to execute before fluentd starts (default =\"\")
+    -fp, --fluentd_pre=[path]  shell script to execute before fluentd starts (default =\"\")
+    -of, --output_format=[enum] Output format: (ndjson, default: default)
+    -ri, --report_interval     Report Interval (default: 120)
 "
   exit 0
 }
@@ -127,6 +131,7 @@ Maximum size of log file --> $maximum_logfile_size
 Deploy gowatcher --> $gowatcher
 Gologfilewatcher image used --> $gologfilewatcher_image
 Use logsample file --> $use_log_samples
+Output Format --> $output_format
 
 Fluentd image used --> $fluentd_image
 Fluentd conf used --> $fluent_conf_file
@@ -148,6 +153,7 @@ deploy() {
   deploy_logstress $number_heavy_stress_containers $heavy_containers_msg_per_sec $number_low_stress_containers $low_containers_msg_per_sec $use_log_samples
   if $gowatcher ; then deploy_gologfilewatcher "$gologfilewatcher_image"; fi
   case "$collector" in
+    'vector') deploy_log_collector_vector "$vector_image" "$vector_conf";;
     'fluentd') deploy_log_collector_fluentd "$fluentd_image" "$fluent_conf_file" "$fluentd_pre";;
     'fluentbit') deploy_log_collector_fluentbit "$fluentbit_image" conf/collector/fluentbit/fluentbit.conf;;
     'fluentd-loki') deploy_log_collector_fluentd "$fluentd_image" conf/collector/fluentd/loki/fluentd.conf "$fluentd_pre";;
@@ -157,7 +163,7 @@ deploy() {
     *) show_usage ;;
   esac
   if $gowatcher ; then expose_metrics_to_prometheus; fi
-  deploy_capture_statistics $number_of_log_lines_between_reports
+  deploy_capture_statistics $number_of_log_lines_between_reports $output_format $report_interval
   if $evacuate_node ; then evacuate_node_for_performance_tests; fi
 }
 
@@ -176,10 +182,14 @@ then
   fluent_conf_file="conf/collector/fluentd/fluentd.conf"
   gologfilewatcher_image="docker.io/cognetive/go-log-file-watcher-with-symlink-support-v0"
   fluentbit_image="fluent/fluent-bit:1.7-debug"
+  vector_image="quay.io/dciancio/vector"
+  vector_conf="conf/collector/vector/vector-clf.toml"
   collector="fluentd"
   fluentd_pre=""
   gowatcher="false"
   use_log_samples="false"
+  output_format="default"
+  report_interval="120"
 
   for i in "$@"
   do
@@ -190,10 +200,14 @@ then
       -fc=*|--fluentconf=*) fluent_conf_file="${i#*=}"; shift ;;
       -fi=*|--fimage=*) fluentd_image="${i#*=}"; shift ;;
       -bi=*|--bimage=*) fluentbit_image="${i#*=}"; shift ;;
+      -vi=*|--vimage=*) vector_image="${i#*=}"; shift ;;
+      -vc=*|--vectorconf=*) vector_conf="${i#*=}"; shift ;;
       -gw=*|--gowatcher=*) gowatcher="${i#*=}"; shift ;;
       -lf=*|--use_log_samples=*) use_log_samples="${i#*=}"; shift ;;
       -gi=*|--gimage=*) gologfilewatcher_image="${i#*=}"; shift ;;
       -fp=*|--fluentd_pre=*) fluentd_pre="${i#*=}"; shift ;;
+      -of=*|--output_format=*) output_format="${i#*=}"; shift ;;
+      -ri=*|--report_interval=*) report_interval="${i#*=}"; shift ;;
       --nothing) nothing=true; shift ;;
       -h|--help|*) show_usage ;;
   esac
