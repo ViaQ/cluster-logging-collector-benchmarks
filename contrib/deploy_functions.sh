@@ -2,9 +2,9 @@
 
 # Selecting worker node to use
 select_node_to_use() {
-  echo "--> Selecting node to use" 
+  echo "--> Selecting node to use"
   NODE_TO_USE=$(oc get nodes --selector='!node-role.kubernetes.io/master' --sort-by=".metadata.name" -o=jsonpath='{.items[0].metadata.name}')
-  echo "Using node: $NODE_TO_USE" 
+  echo "Using node: $NODE_TO_USE"
 }
 
 # configure containers log-max-size to 10MB
@@ -49,7 +49,7 @@ create_logstress_project() {
   oc project logstress
 }
 
-# set credentials (allow privileged) 
+# set credentials (allow privileged)
 set_credentials() {
   echo "--> Setting credentials"
   #oc adm policy add-scc-to-user privileged -z default
@@ -161,7 +161,7 @@ deploy_capture_statistics() {
   go build -ldflags "-s -w" go/check-logs-sequence/check-logs-sequence.go
   zip -j check-logs-sequence.zip  check-logs-sequence
   oc delete configmap --ignore-not-found=true check-logs-sequence-binary-zip
-  oc create configmap check-logs-sequence-binary-zip --from-file=check-logs-sequence.zip
+  oc create configmap check-logs-sequence-binary-zip --from-file=check-logs-sequence.zip --from-file=conf/monitor/kubectl-top.sh
   rm -f check-logs-sequence.zip
   rm -f check-logs-sequence
   oc adm policy add-scc-to-user privileged -z capturestatistics-service-account
@@ -170,7 +170,7 @@ deploy_capture_statistics() {
   oc process -f $DEPLOY_YAML \
   -p number_of_log_lines_between_reports="$1" \
   -p output_format="$2" \
-  -p report_interval="$3" \
+  -p output_interval="$3" \
   | oc apply -f -
 }
 
@@ -179,7 +179,7 @@ evacuate_node_for_performance_tests() {
   echo "--> Evacuating $NODE_TO_USE"
   echo "!!!!!!!!!!!!!!!!!!!!!!!!!!"
   oc get pods --all-namespaces -o wide | grep "$NODE_TO_USE"
-  
+
   oc adm cordon "$NODE_TO_USE"
   oc adm drain "$NODE_TO_USE" --pod-selector='app notin (low-log-stress,heavy-log-stress,fluentd,capturestatistics)' --ignore-daemonsets=true --delete-local-data --force
 }
@@ -202,6 +202,9 @@ print_pods_status () {
   oc get pods
 }
 
+cleanup() {
+  kill -9 $pid
+}
 # print usage instructions
 print_usage_instructions () {
   CAPTURE_STATISTICS_POD=$(oc get pod -l app=capturestatistics -o jsonpath="{.items[0].metadata.name}")
@@ -216,5 +219,8 @@ print_usage_instructions () {
   echo -e "Tailing pod $CAPTURE_STATISTICS_POD using command:"
   command="oc logs -f $CAPTURE_STATISTICS_POD"
   echo -e "$command"
-  $command
+  $command &
+  pid=$?
+  trap cleanup exit
+  sleep 3600
 }
