@@ -2,7 +2,7 @@
 # in discovering log-levels.
 
 export capture_pod=`oc get pods | grep capture | cut -d" " -f1`
-export collector_pod=`oc get pods | grep fluent | cut -d" " -f1`
+export  fluentd_pod=`oc get pods | grep fluentd | cut -d" " -f1`
 export iterations=`oc logs $capture_pod | grep  " |  ruby" | wc -l`
 
 if [ "$iterations" -lt 10 ]; then echo "Total Iterations till now: $iterations Results will be printed after 10 iterations"; exit 1; fi
