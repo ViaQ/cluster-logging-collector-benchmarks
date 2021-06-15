@@ -1,0 +1,15 @@
+[sources.kube]
+  type = "file"
+  include = ["/var/log/containers/low-log-stress*.log", "/var/log/containers/heavy-log-stress*.log"]
+  file_key = "path"
+[transforms.transformed]
+  type = "regex_parser"
+  inputs = ["kube"]
+  field = "message"
+  patterns = ['^(?P<time>[^\s]+) (?P<stream>stdout|stderr)( (?P<logtag>.))? (?P<message>.*)$']
+
+[sinks.stress]
+  type="file"
+  inputs = ["transformed"]
+  encoding.codec = "ndjson"
+  path = "/var/log/containers/stress.log"

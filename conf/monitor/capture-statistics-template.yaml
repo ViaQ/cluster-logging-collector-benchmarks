@@ -37,27 +37,26 @@ objects:
           args:
           - -c
           - >
+            echo "=== setup-begin ===";
             yum install -y procps;
             yum install -y unzip;
+            cd /tmp;
             curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl";
             chmod +x kubectl;
             unzip /go/bin/check-logs-sequence.zip;
+            cp /go/bin/kubectl-top.sh . ;
+            chmod 744 kubectl-top.sh ;
             echo "Collecting Statistics";
             OUTPUT_FILE=/var/log/containers/stress.log;
             echo -e "\nOutput log file is: $OUTPUT_FILE\n";
             touch $OUTPUT_FILE;
-            ./check-logs-sequence -f $OUTPUT_FILE -c ${number_of_log_lines_between_reports} -l ${check_log_level} &
-            echo ".";
+            ./check-logs-sequence -rf ${output_format} -f $OUTPUT_FILE -c ${number_of_log_lines_between_reports} -l ${check_log_level} &
+            echo "=== setup-end ===";
             while true; do
-              echo "====> Top information on: $(date)";
-              COLUMNS=1000 top -b -n 1 -o +%CPU | sed 1,6d | awk '{print $9"\t|\t"$10"\t|\t"$12}' | column -t | head -n 20;
-              echo "=============";
-              echo "====> K8S Top information";
-              ./kubectl top pod --namespace="logstress" --sort-by="cpu" --use-protocol-buffers | head -n 20;
-              ./kubectl top pod --namespace="loki" --sort-by="cpu" --use-protocol-buffers | head -n 20;
-              echo "=============";
-              sleep ${report_interval};
-            done;        
+              ./kubectl-top.sh ${output_format} "logstress" ;
+              ./kubectl-top.sh ${output_format} "loki" ;
+              sleep ${output_interval} ;
+            done ;
           volumeMounts:
           - name: varlog
             mountPath: /var/log
@@ -75,5 +74,7 @@ parameters:
   - name: number_of_log_lines_between_reports
   - name: check_log_level
     value: fatal
-  - name: report_interval
+  - name: output_interval
     value: "120"
+  - name: output_format
+    value: "default"

@@ -2,9 +2,9 @@
 
 # Selecting worker node to use
 select_node_to_use() {
-  echo "--> Selecting node to use" 
+  echo "--> Selecting node to use"
   NODE_TO_USE=$(oc get nodes --selector='!node-role.kubernetes.io/master' --sort-by=".metadata.name" -o=jsonpath='{.items[0].metadata.name}')
-  echo "Using node: $NODE_TO_USE" 
+  echo "Using node: $NODE_TO_USE"
 }
 
 # configure containers log-max-size to 10MB
@@ -49,7 +49,7 @@ create_logstress_project() {
   oc project logstress
 }
 
-# set credentials (allow privileged) 
+# set credentials (allow privileged)
 set_credentials() {
   echo "--> Setting credentials"
   #oc adm policy add-scc-to-user privileged -z default
@@ -97,13 +97,12 @@ deploy_log_collector_fluentd() {
   mkdir -p tmp
   echo "--> Deploying $DEPLOY_YAML - with ($1 $2 $3)"
   rm -f tmp/fluentd.conf
-  cp "$2" tmp/fluentd.conf
   oc delete configmap --ignore-not-found=true fluentd-config
-  oc create configmap fluentd-config --from-file=tmp/fluentd.conf
+  oc create configmap fluentd-config --from-file=fluentd.conf="$2"
   echo "" > tmp/fluentd_pre.sh
   cp "$3" tmp/fluentd_pre.sh
   oc delete configmap --ignore-not-found=true fluentd-pre-sh
-  oc create configmap fluentd-pre-sh --from-file=tmp/fluentd_pre.sh
+  oc create configmap fluentd-pre-sh --from-file=fluentd_pre.sh=tmp/fluentd_pre.sh
   oc adm policy add-scc-to-user privileged -z collector-service-account
   oc delete deployment --ignore-not-found=true fluentd
   oc process -f $DEPLOY_YAML \
@@ -128,7 +127,7 @@ deploy_log_collector_fluentbit() {
 
   echo "--> Deploying $DEPLOY_YAML - with ($1)"
   oc delete configmap --ignore-not-found=true fluentbit-config
-  oc create configmap fluentbit-config --from-file="$2" --from-file=conf/collector/fluentbit/fluentbit.parsers.conf --from-file=conf/collector/fluentbit/fluentbit.merge-crio-multiline.lua
+  oc create configmap fluentbit-config --from-file=fluentbit.conf="$2" --from-file=conf/collector/fluentbit/fluentbit.parsers.conf --from-file=conf/collector/fluentbit/fluentbit.lua
   oc adm policy add-scc-to-user privileged -z collector-service-account
   oc delete deployment --ignore-not-found=true fluentbit
   oc process -f $DEPLOY_YAML \
@@ -153,11 +152,7 @@ deploy_log_collector_vector() {
 # deploy capture statistics container
 deploy_capture_statistics() {
   DEPLOY_YAML=conf/monitor/capture-statistics-template.yaml
-  if [ "$2" == "ndjson" ] ; then
-    DEPLOY_YAML=conf/monitor/capture-statistics-template-ndjson.yaml
-  fi
-
-  echo "--> Deploying $DEPLOY_YAML - with ($1)"
+  echo "--> Deploying $DEPLOY_YAML - with ($1 $2 $3)"
   rm -f check-logs-sequence.zip
   rm -f check-logs-sequence
   go get -u github.com/papertrail/go-tail
@@ -166,7 +161,7 @@ deploy_capture_statistics() {
   go build -ldflags "-s -w" go/check-logs-sequence/check-logs-sequence.go
   zip -j check-logs-sequence.zip  check-logs-sequence
   oc delete configmap --ignore-not-found=true check-logs-sequence-binary-zip
-  oc create configmap check-logs-sequence-binary-zip --from-file=check-logs-sequence.zip
+  oc create configmap check-logs-sequence-binary-zip --from-file=check-logs-sequence.zip --from-file=conf/monitor/kubectl-top.sh
   rm -f check-logs-sequence.zip
   rm -f check-logs-sequence
   oc adm policy add-scc-to-user privileged -z capturestatistics-service-account
@@ -174,7 +169,8 @@ deploy_capture_statistics() {
   oc delete deployment --ignore-not-found=true capturestatistics
   oc process -f $DEPLOY_YAML \
   -p number_of_log_lines_between_reports="$1" \
-  -p report_interval="$3" \
+  -p output_format="$2" \
+  -p output_interval="$3" \
   | oc apply -f -
 }
 
@@ -183,7 +179,7 @@ evacuate_node_for_performance_tests() {
   echo "--> Evacuating $NODE_TO_USE"
   echo "!!!!!!!!!!!!!!!!!!!!!!!!!!"
   oc get pods --all-namespaces -o wide | grep "$NODE_TO_USE"
-  
+
   oc adm cordon "$NODE_TO_USE"
   oc adm drain "$NODE_TO_USE" --pod-selector='app notin (low-log-stress,heavy-log-stress,fluentd,capturestatistics)' --ignore-daemonsets=true --delete-local-data --force
 }
@@ -206,6 +202,13 @@ print_pods_status () {
   oc get pods
 }
 
+cleanup() {
+  kill -9 $pid
+}
+
+trap_exit() {
+  trap cleanup exit
+}
 # print usage instructions
 print_usage_instructions () {
   CAPTURE_STATISTICS_POD=$(oc get pod -l app=capturestatistics -o jsonpath="{.items[0].metadata.name}")
@@ -220,5 +223,8 @@ print_usage_instructions () {
   echo -e "Tailing pod $CAPTURE_STATISTICS_POD using command:"
   command="oc logs -f $CAPTURE_STATISTICS_POD"
   echo -e "$command"
-  $command
+  $command &
+  pid=$?
+  trap_exit
+  sleep 3600
 }
