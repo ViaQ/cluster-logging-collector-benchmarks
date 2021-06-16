@@ -5,7 +5,12 @@ all: deploy
 deploy:
 	./deploy_to_openshift.sh
 
-build:
+lint:
+	go get -u golang.org/x/lint/golint
+	golint go/*
+
+build: lint
+	go env -w GO111MODULE=auto
 	rm -f log-stressor.zip
 	rm -f log-stressor
 	rm -f check-logs-sequence.zip

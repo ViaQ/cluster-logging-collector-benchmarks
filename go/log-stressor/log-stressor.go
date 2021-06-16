@@ -1,13 +1,13 @@
 package main
 
 import (
-    "flag"
-    "fmt"
-    "log"
-    "math/rand"
-    "time"
-    "bufio"
-    "os"
+	"bufio"
+	"flag"
+	"fmt"
+	"log"
+	"math/rand"
+	"os"
+	"time"
 )
 
 const (
@@ -16,7 +16,7 @@ const (
 	letterBytes          = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 )
 
-func ReadFile(fileName string)[] string {
+func readFile(fileName string)[] string {
 
     readFile, err := os.Open(fileName)
 
@@ -32,33 +32,33 @@ func ReadFile(fileName string)[] string {
 		fileTextLines = append(fileTextLines, fileScanner.Text())
 	}
 
-	readFile.Close()
+	_ = readFile.Close()
     return fileTextLines
 }
 
-func GetLogLinesFromFile()[]string{
+func getLogLinesFromFile()[]string{
 	var loglines []string
 	fileName := "samples.log"
-	loglines = ReadFile(fileName)
+	loglines = readFile(fileName)
 	return loglines
 }
 
-func GetRandomLogline(loglines []string) string{
+func getRandomLogline(loglines []string) string{
     index := rand.Intn(len(loglines))
     return loglines[index]
 }
 
-func GetPayload(opt Options, loglines []string) string{
+func getPayload(opt options, loglines []string) string{
 	payload := ""
-	if opt.use_log_samples == "true" {
-		payload = GetRandomLogline(loglines)
+	if opt.useLogSamples == "true" {
+		payload = getRandomLogline(loglines)
 	}else{
-		payload = RandStringBytes(opt.payloadSize)
+		payload = randStringBytes(opt.payloadSize)
 	}
 	return payload
 }
 
-func RandStringBytes(n int) string {
+func randStringBytes(n int) string {
 	b := make([]byte, n)
 	for i := range b {
 		b[i] = letterBytes[rand.Intn(len(letterBytes))]
@@ -66,7 +66,7 @@ func RandStringBytes(n int) string {
 	return string(b)
 }
 
-type Options struct {
+type options struct {
 	payloadGen        string
 	distribution      string
 	payloadSize       int
@@ -74,12 +74,12 @@ type Options struct {
 	totMessages       int
 	outputFormat      string
 	outputFile        string
-	use_log_samples   string
+	useLogSamples     string
 }
 
 func main() {
 
-	opt := Options{}
+	opt := options{}
 
 	flag.StringVar(&opt.outputFile, "file", "", "The file to output (default: STDOUT)")
 	flag.StringVar(&opt.outputFormat, "output-format", "default", "The output format: default, crio (mimic CRIO output)")
@@ -88,7 +88,7 @@ func main() {
 	flag.IntVar(&opt.payloadSize, "payload_size", 100, "Payload length [int] (default = 100)")
 	flag.IntVar(&opt.messagesPerSecond, "msgpersec", 1, "Number of messages per second (default = 1)")
 	flag.IntVar(&opt.totMessages, "totMessages", 1, "Total number of messages (only applicable for 'fixed' payload-gen")
-	flag.StringVar(&opt.use_log_samples, "use_log_samples", "false", "Use log samples or not [enum] (default = false)")
+	flag.StringVar(&opt.useLogSamples, "use_log_samples", "false", "Use log samples or not [enum] (default = false)")
 
 	flag.Parse()
 
@@ -97,27 +97,27 @@ func main() {
 	var rnd = rand.New(rand.NewSource(time.Now().UnixNano()))
 	hash := fmt.Sprintf("%032X", rnd.Uint64())
 
-	outFormat := NewFormatter(opt.outputFile, opt.outputFormat)
-	generateLogs := NewDistributionProfile(opt.payloadGen, opt.distribution)
+	outFormat := newFormatter(opt.outputFile, opt.outputFormat)
+	generateLogs := newDistributionProfile(opt.payloadGen, opt.distribution)
 	generateLogs(outFormat, hash, opt)
 }
 
-type DistributionProfile func(format formatter, hash string, opt Options)
+type distributionProfile func(format formatter, hash string, opt options)
 
-//FiniteFixedProfile produces a fixed number of messages with a constant distribution?
-func FiniteFixedProfile(format formatter, hash string, opt Options) {
+//finiteFixedProfile produces a fixed number of messages with a constant distribution?
+func finiteFixedProfile(format formatter, hash string, opt options) {
     
-	loglines := GetLogLinesFromFile()
+	loglines := getLogLinesFromFile()
 
 	for i := 0; i < opt.totMessages; i++ {
-		payload := GetPayload(opt, loglines)
+		payload := getPayload(opt, loglines)
 		format(hash, i, payload)
 	}
 }
 
-//ConstantFixedProfile produces a constant stream of fixed messages
-func ConstantFixedProfile(format formatter, hash string, opt Options) {
-	loglines := GetLogLinesFromFile()
+//constantFixedProfile produces a constant stream of fixed messages
+func constantFixedProfile(format formatter, hash string, opt options) {
+	loglines := getLogLinesFromFile()
 
 	bursts := 1
 	if opt.messagesPerSecond > minBurstMessageCount {
@@ -127,7 +127,7 @@ func ConstantFixedProfile(format formatter, hash string, opt Options) {
 	startTime := time.Now().Unix() - 1
 	for {
 		for i := 0; i < opt.messagesPerSecond/bursts; i++ {
-			payload := GetPayload(opt, loglines)
+			payload := getPayload(opt, loglines)
 			format(hash, messageCount, payload)
 			messageCount++
 		}
@@ -142,19 +142,19 @@ func ConstantFixedProfile(format formatter, hash string, opt Options) {
 	}
 }
 
-func NewDistributionProfile(payloadGen, distribution string) DistributionProfile {
+func newDistributionProfile(payloadGen, distribution string) distributionProfile {
 	profile := payloadGen + "/" + distribution
 	switch profile {
 	case "fixed/fixed":
-		return FiniteFixedProfile
+		return finiteFixedProfile
 	default:
-		return ConstantFixedProfile
+		return constantFixedProfile
 	}
 }
 
 type formatter func(hash string, messageCount int, payload string)
 
-func NewFormatter(outputFile, outputFormat string) formatter {
+func newFormatter(outputFile, outputFormat string) formatter {
 	if outputFile != "" {
 		f, err := os.Create(outputFile)
 		if err != nil {
@@ -162,20 +162,20 @@ func NewFormatter(outputFile, outputFormat string) formatter {
 		}
 		log.SetOutput(f)
 	}
-	formatter := FormatForStdOut
+	formatter := formatForStdOut
 	if outputFormat == "crio" {
 		log.SetFlags(0)
 		log.SetPrefix("")
-		formatter = FormatForCrio
+		formatter = formatForCrio
 	}
 	return formatter
 }
 
-func FormatForCrio(hash string, messageCount int, payload string) {
+func formatForCrio(hash string, messageCount int, payload string) {
 	now := time.Now().Format(time.RFC3339Nano)
 	log.Printf("%s stdout F goloader seq - %s - %010d - %s\n", now, hash, messageCount, payload)
 }
 
-func FormatForStdOut(hash string, messageCount int, payload string) {
+func formatForStdOut(hash string, messageCount int, payload string) {
 	log.Printf("goloader seq - %s - %010d - %s", hash, messageCount, payload)
 }
