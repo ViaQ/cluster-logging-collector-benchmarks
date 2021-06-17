@@ -202,9 +202,12 @@ print_pods_status () {
   oc get pods
 }
 
+trap 'cleanup; exit 0' EXIT
+
 cleanup() {
-  kill -9 $pid
+  kill $(jobs -p)
 }
+
 # print usage instructions
 print_usage_instructions () {
   CAPTURE_STATISTICS_POD=$(oc get pod -l app=capturestatistics -o jsonpath="{.items[0].metadata.name}")
@@ -220,7 +223,5 @@ print_usage_instructions () {
   command="oc logs -f $CAPTURE_STATISTICS_POD"
   echo -e "$command"
   $command &
-  pid=$?
-  trap cleanup exit
   sleep 3600
 }
