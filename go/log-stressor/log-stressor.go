@@ -1,70 +1,10 @@
 package main
 
 import (
-	"bufio"
 	"flag"
-	"fmt"
-	"log"
-	"math/rand"
-	"os"
-	"time"
+	logger "github.com/ViaQ/cluster-logging-load-client/loadclient"
+	log "github.com/sirupsen/logrus"
 )
-
-const (
-	minBurstMessageCount = 100
-	numberOfBursts       = 10
-	letterBytes          = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
-)
-
-func readFile(fileName string)[] string {
-
-    readFile, err := os.Open(fileName)
-
-	if err != nil {
-		log.Fatalf("failed to open file: %s", err)
-	}
-
-	fileScanner := bufio.NewScanner(readFile)
-	fileScanner.Split(bufio.ScanLines)
-	var fileTextLines []string
-
-	for fileScanner.Scan() {
-		fileTextLines = append(fileTextLines, fileScanner.Text())
-	}
-
-	_ = readFile.Close()
-    return fileTextLines
-}
-
-func getLogLinesFromFile()[]string{
-	var loglines []string
-	fileName := "samples.log"
-	loglines = readFile(fileName)
-	return loglines
-}
-
-func getRandomLogline(loglines []string) string{
-    index := rand.Intn(len(loglines))
-    return loglines[index]
-}
-
-func getPayload(opt options, loglines []string) string{
-	payload := ""
-	if opt.useLogSamples == "true" {
-		payload = getRandomLogline(loglines)
-	}else{
-		payload = randStringBytes(opt.payloadSize)
-	}
-	return payload
-}
-
-func randStringBytes(n int) string {
-	b := make([]byte, n)
-	for i := range b {
-		b[i] = letterBytes[rand.Intn(len(letterBytes))]
-	}
-	return string(b)
-}
 
 type options struct {
 	payloadGen        string
@@ -92,90 +32,35 @@ func main() {
 
 	flag.Parse()
 
-	rand.Seed(time.Now().UnixNano())
-
-	var rnd = rand.New(rand.NewSource(time.Now().UnixNano()))
-	hash := fmt.Sprintf("%032X", rnd.Uint64())
-
-	outFormat := newFormatter(opt.outputFile, opt.outputFormat)
-	generateLogs := newDistributionProfile(opt.payloadGen, opt.distribution)
-	generateLogs(outFormat, hash, opt)
-}
-
-type distributionProfile func(format formatter, hash string, opt options)
-
-//finiteFixedProfile produces a fixed number of messages with a constant distribution?
-func finiteFixedProfile(format formatter, hash string, opt options) {
-    
-	loglines := getLogLinesFromFile()
-
-	for i := 0; i < opt.totMessages; i++ {
-		payload := getPayload(opt, loglines)
-		format(hash, i, payload)
+	// define "destination" as file or stdout
+	totalMessages := int64(opt.totMessages)
+	if opt.payloadGen == "constant" {
+		totalMessages = 0
 	}
-}
 
-//constantFixedProfile produces a constant stream of fixed messages
-func constantFixedProfile(format formatter, hash string, opt options) {
-	loglines := getLogLinesFromFile()
-
-	bursts := 1
-	if opt.messagesPerSecond > minBurstMessageCount {
-		bursts = numberOfBursts
+	// define "destination" as file or stdout
+	destination := "stdout"
+	if opt.outputFile != "" {
+		destination = "file"
 	}
-	messageCount := 0
-	startTime := time.Now().Unix() - 1
-	for {
-		for i := 0; i < opt.messagesPerSecond/bursts; i++ {
-			payload := getPayload(opt, loglines)
-			format(hash, messageCount, payload)
-			messageCount++
-		}
 
-		sleep := 1.0 / float64(bursts)
-		deltaTime := int(time.Now().Unix() - startTime)
-
-		messagesLoggedPerSec := messageCount / deltaTime
-		if messagesLoggedPerSec >= opt.messagesPerSecond {
-			time.Sleep(time.Duration(sleep * float64(time.Second)))
-		}
+	source := "synthetic"
+	if opt.useLogSamples == "true" {
+		source = "application"
 	}
-}
 
-func newDistributionProfile(payloadGen, distribution string) distributionProfile {
-	profile := payloadGen + "/" + distribution
-	switch profile {
-	case "fixed/fixed":
-		return finiteFixedProfile
-	default:
-		return constantFixedProfile
+	loggerOptions := logger.Options{
+		Command:              logger.Generate,
+		Threads:              1,
+		LogLinesPerSec:       int64(opt.messagesPerSecond),
+		Destination:          destination,
+		Source:               source,
+		SyntheticPayloadSize: opt.payloadSize,
+		TotalLogLines:        totalMessages,
+		LogFormat:            opt.outputFormat,
+		OutputFile:           opt.outputFile,
+		DestinationAPIURL:    "",
 	}
-}
-
-type formatter func(hash string, messageCount int, payload string)
-
-func newFormatter(outputFile, outputFormat string) formatter {
-	if outputFile != "" {
-		f, err := os.Create(outputFile)
-		if err != nil {
-			log.Fatalf("Unable to create out file %s: %v", outputFile, err)
-		}
-		log.SetOutput(f)
-	}
-	formatter := formatForStdOut
-	if outputFormat == "crio" {
-		log.SetFlags(0)
-		log.SetPrefix("")
-		formatter = formatForCrio
-	}
-	return formatter
-}
-
-func formatForCrio(hash string, messageCount int, payload string) {
-	now := time.Now().Format(time.RFC3339Nano)
-	log.Printf("%s stdout F goloader seq - %s - %010d - %s\n", now, hash, messageCount, payload)
-}
-
-func formatForStdOut(hash string, messageCount int, payload string) {
-	log.Printf("goloader seq - %s - %010d - %s", hash, messageCount, payload)
+	log.SetLevel(log.ErrorLevel)
+	logger.GenerateLog(loggerOptions)
 }
