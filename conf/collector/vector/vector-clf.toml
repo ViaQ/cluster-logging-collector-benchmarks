@@ -39,7 +39,7 @@
   route.app = '!(starts_with!(.kubernetes.pod_namespace,"kube") && starts_with!(.kubernetes.pod_namespace,"openshift") && .kubernetes.pod_namespace == "default")'
 
 [sinks.stress]
-  type="file"
+  type  = "file"
   inputs = ["ocp_sys.infra","ocp_sys.app"]
   encoding.codec = "ndjson"
   path = "/var/log/containers/stress.log"
