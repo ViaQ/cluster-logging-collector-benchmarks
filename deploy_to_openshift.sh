@@ -30,7 +30,7 @@ select_stress_profile() {
   heavy_containers_msg_per_sec=1000
   low_containers_msg_per_sec=10
   number_of_log_lines_between_reports=10;
-  maximum_logfile_size=10485760;
+  maximum_logfile_size=52428800;  # default file size
 
   case $stress_profile in
       "no-stress")
@@ -39,7 +39,7 @@ select_stress_profile() {
         number_low_stress_containers=0;
         low_containers_msg_per_sec=0;
         number_of_log_lines_between_reports=10;
-        maximum_logfile_size=10485760;
+        maximum_logfile_size=52428800;
         ;;
       "very-light")
         number_heavy_stress_containers=0;
@@ -47,7 +47,7 @@ select_stress_profile() {
         number_low_stress_containers=1;
         low_containers_msg_per_sec=10;
         number_of_log_lines_between_reports=100;
-        maximum_logfile_size=10485760;
+        maximum_logfile_size=52428800;
         ;;
       "light")
         number_heavy_stress_containers=1;
@@ -55,15 +55,7 @@ select_stress_profile() {
         number_low_stress_containers=2;
         low_containers_msg_per_sec=10;
         number_of_log_lines_between_reports=1000;
-        maximum_logfile_size=1048576;
-        ;;
-      "experiment")
-        number_heavy_stress_containers=0;
-        heavy_containers_msg_per_sec=0;
-        number_low_stress_containers=20;
-        low_containers_msg_per_sec=20000;
-        number_of_log_lines_between_reports=100;
-        maximum_logfile_size=10485760;
+        maximum_logfile_size=52428800;
         ;;
       "medium")
         number_heavy_stress_containers=2;
@@ -71,7 +63,7 @@ select_stress_profile() {
         number_low_stress_containers=10;
         low_containers_msg_per_sec=10;
         number_of_log_lines_between_reports=20000;
-        maximum_logfile_size=1048576;
+        maximum_logfile_size=52428800;
         ;;
       "heavy")
         number_heavy_stress_containers=0;
@@ -79,15 +71,7 @@ select_stress_profile() {
         number_low_stress_containers=10;
         low_containers_msg_per_sec=1500;
         number_of_log_lines_between_reports=200000;
-        maximum_logfile_size=1048576;
-        ;;
-      "very-heavy")
-        number_heavy_stress_containers=0;
-        heavy_containers_msg_per_sec=0;
-        number_low_stress_containers=10;
-        low_containers_msg_per_sec=3000;
-        number_of_log_lines_between_reports=300000;
-        maximum_logfile_size=1048576;
+        maximum_logfile_size=52428800;
         ;;
       "heavy-loss")
         number_heavy_stress_containers=2;
@@ -95,7 +79,7 @@ select_stress_profile() {
         number_low_stress_containers=8;
         low_containers_msg_per_sec=1500;
         number_of_log_lines_between_reports=200000;
-        maximum_logfile_size=1048576;
+        maximum_logfile_size=52428800;
         ;;
       "very-heavy")
         number_heavy_stress_containers=10;
@@ -103,7 +87,7 @@ select_stress_profile() {
         number_low_stress_containers=10;
         low_containers_msg_per_sec=1500;
         number_of_log_lines_between_reports=1000000;
-        maximum_logfile_size=1048576;
+        maximum_logfile_size=52428800;
         ;;
       *) show_usage
         ;;
@@ -156,8 +140,8 @@ deploy() {
   delete_logstress_project_if_exists
   create_logstress_project
   set_credentials
-  deploy_logstress $number_heavy_stress_containers $heavy_containers_msg_per_sec $number_low_stress_containers $low_containers_msg_per_sec $use_log_samples
-  if $gowatcher ; then deploy_gologfilewatcher "$gologfilewatcher_image"; fi
+ 
+
   case "$collector" in
     'vector') deploy_log_collector_vector "$vector_image" "$vector_conf";;
     'fluentd') deploy_log_collector_fluentd "$fluentd_image" "$fluentd_conf_file" "$fluentd_pre";;
@@ -168,6 +152,8 @@ deploy() {
             deploy_log_collector_fluentbit "$fluentbit_image" conf/collector/fluentbit/dual/fluentbit.conf;;
     *) show_usage ;;
   esac
+  deploy_logstress $number_heavy_stress_containers $heavy_containers_msg_per_sec $number_low_stress_containers $low_containers_msg_per_sec $use_log_samples
+  if $gowatcher ; then deploy_gologfilewatcher "$gologfilewatcher_image"; fi
   if $gowatcher ; then expose_metrics_to_prometheus; fi
   deploy_capture_statistics $number_of_log_lines_between_reports "$output_format" "$report_interval"
   if $evacuate_node ; then evacuate_node_for_performance_tests; fi
