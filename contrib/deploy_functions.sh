@@ -63,22 +63,7 @@ set_credentials() {
 deploy_logstress() {
   DEPLOY_YAML=conf/stressor/logstress-template.yaml
 
-  echo "--> Deploying $DEPLOY_YAML - with ($1 $2 $3 $4 $5)"
-  rm -f log-stressor.zip
-  rm -f log-stressor
-  rm -f log-samples.zip
-  go env -w GO111MODULE=auto
-  go build -ldflags "-s -w" go/log-stressor/log-stressor.go
-  zip -j log-stressor.zip  log-stressor
-  zip -j log-samples.zip go/check-logs-sequence/samples.log
-  oc delete configmap --ignore-not-found=true log-samples-binary-zip
-  oc delete configmap --ignore-not-found=true log-stressor-binary-zip
-  oc create configmap log-stressor-binary-zip --from-file=log-stressor.zip
-  oc create configmap log-samples-binary-zip --from-file=log-samples.zip
-  rm -f log-samples.zip
-  rm -f log-stressor.zip
-  rm -f log-stressor
-
+  echo "--> Deploying $DEPLOY_YAML - with ($1 $2 $3 $4 $5 $6)"
   oc adm policy add-scc-to-user privileged -z stress-service-account
   oc delete --ignore-not-found=true deployment low-log-stress
   oc delete --ignore-not-found=true deployment heavy-log-stress
@@ -88,6 +73,7 @@ deploy_logstress() {
     -p number_low_stress_containers="$3" \
     -p low_containers_msg_per_sec="$4" \
     -p use_log_samples="$5" \
+    -p log_stressor_image="$6" \
     | oc apply -f -
 }
 

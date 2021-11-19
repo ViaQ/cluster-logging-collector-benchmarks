@@ -27,41 +27,18 @@ objects:
       spec:
         serviceAccountName: stress-service-account
         containers:
-        - image: registry.fedoraproject.org/fedora
+        - image: ${log_stressor_image}
           securityContext:
             runAsUser: 0
             privileged: true
             allowPrivilegeEscalation: true
           imagePullPolicy: Always
           name: heavy-log-stress
-          command: ["/bin/bash"]
           args:
-            - -c
-            - >
-              yum install -y procps;
-              yum install -y unzip;
-              unzip /go/bin/log-stressor.zip;
-              unzip /go/logs/log-samples.zip;
-              ./log-stressor --msgpersec=${heavy_containers_msg_per_sec}  --use_log_samples=${use_log_samples} ;
-              echo ".";
-              echo "NEVER GET HERE --> this code is for future performance testing";
-              echo ".";
-              while true; do
-                echo "->";
-                sleep 60;
-              done;
-          volumeMounts:
-            - name: log-stressor
-              mountPath: /go/bin
-            - name: log-samples
-              mountPath: /go/logs
-        volumes:
-          - name: log-stressor
-            configMap:
-              name: log-stressor-binary-zip
-          - name: log-samples
-            configMap:
-              name: log-samples-binary-zip
+            - generate 
+            - --log-lines-rate=${heavy_containers_msg_per_sec}
+            - --source=${use_log_samples}
+          restartPolicy: Always
 #
 #
 # Deployment replicas of low-log-stress pods
@@ -83,45 +60,22 @@ objects:
       spec:
         serviceAccountName: stress-service-account
         containers:
-        - image: registry.fedoraproject.org/fedora
+        - image: ${log_stressor_image}
           securityContext:
             runAsUser: 0
             privileged: true
             allowPrivilegeEscalation: true
           imagePullPolicy: Always
           name: low-log-stress
-          command: ["/bin/bash"]
           args:
-            - -c
-            - >
-              yum install -y procps;
-              yum install -y unzip;
-              unzip /go/bin/log-stressor.zip;
-              unzip /go/logs/log-samples.zip;
-              ./log-stressor --msgpersec=${low_containers_msg_per_sec}  --use_log_samples=${use_log_samples} ;
-              echo ".";
-              echo "NEVER GET HERE --> this code is for future performance testing";
-              echo ".";
-              while true; do
-                echo "->";
-                sleep 60;
-              done;
-          volumeMounts:
-            - name: log-stressor
-              mountPath: /go/bin
-            - name: log-samples
-              mountPath: /go/logs
-        volumes:
-          - name: log-stressor
-            configMap:
-              name: log-stressor-binary-zip
-          - name: log-samples
-            configMap:
-              name: log-samples-binary-zip
-
+            - generate 
+            - --log-lines-rate=${low_containers_msg_per_sec}
+            - --source=${use_log_samples}
+          restartPolicy: Always
 parameters:
 - name: number_heavy_stress_containers
 - name: heavy_containers_msg_per_sec
 - name: number_low_stress_containers
 - name: low_containers_msg_per_sec
 - name: use_log_samples
+- name: log_stressor_image
