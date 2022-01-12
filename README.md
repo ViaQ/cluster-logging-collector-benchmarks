@@ -1,13 +1,13 @@
 #  Cluster Logging Collectors - benchmarks
 
 This repository holds code and scripts to benchmark
-fluentd and fluent-bit log collectors as they are deployed 
+fluentd, fluent-bit and vector log collectors as they are deployed 
 on top of  environment.
 
 The content of this repository includes the following components:
 
-1. Log load application (simple golang app - `log-stressor.go`) deployed inside containers that create log stress on OpenShift   
-1. Collectors configuration and deployment files. This includes both fluentd and fluent bit configurations   
+1. Log load application deployed inside containers that create log stress on OpenShift. (Please refer to [cluster-logging-load-client](https://github.com/ViaQ/cluster-logging-load-client) for more information) 
+1. Collectors configuration and deployment files. This includes fluentd, fluent bit and vector configurations   
 1. Benchmark monitoring and statistics component (simple golang app `check-logs-sequence.go`)   
 1. Deployment and benchmark management scripts  
 
@@ -47,6 +47,14 @@ Another example using fluentd with specific configuration (partial CLO configura
 `./deploy_to_openshift.sh -p=heavy -c=fluentd -fc=conf/collector/fluentd/partial/CLO_no_measure.conf`
 
 > Note: make sure to use the sign `=` between each command-line key and value
+
+### Cluster Logging Load Client
+
+This [project](https://github.com/ViaQ/cluster-logging-load-client) is a golang application to generate logs and send them to various output destinations in various formats. The app runs as a single executable and based on configuration it can spawn multiple threads. User can scale the app horizontally for heavy workload. 
+
+To use a different load client, you can specify it in the configuration  
+`./deploy_to_openshift.sh --stressorimage=<LINK TO YOUR CONTAINER IMAGE>`
+
 
 ### Vector Configuration
 Note any vector configuration that utilizes a "kubernetes_log" source must additionally have a transform to modify "file" to "path" as
