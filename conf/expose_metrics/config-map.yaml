@@ -7,3 +7,4 @@ data:
   config.yaml: |
     techPreviewUserWorkload:
       enabled: true
+    enableUserWorkload: true

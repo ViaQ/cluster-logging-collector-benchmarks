@@ -180,12 +180,15 @@ func parseLine(line string) (name string, seq int64, logTag string, hashID strin
 
 	// parse name (from path)
 	pathStartIndex := strings.Index(line, "\"path\":\"")
+
 	if pathStartIndex == -1 {
-		err = errors.New("parseLine: cant find path start")
-		return  "", 0, "", "", err
+		pathStartIndex = strings.Index(line, "\"file\":\"")
+		if pathStartIndex == -1 {
+			err = errors.New("parseLine: cant find path start")
+			return  "", 0, "", "", err
+		}
 	}
 	pathStartIndex += len("\"path\":\"")
-
 	pathEndIndex := strings.Index(line[pathStartIndex:], "\"")
 	if pathEndIndex == -1 {
 		err = errors.New("parseLine: cant find path end")
@@ -200,18 +203,22 @@ func parseLine(line string) (name string, seq int64, logTag string, hashID strin
 		err = errors.New("parseLine: can't parse _ in path")
 		return  "", 0, "", "", err
 	}
-	nameSliced = strings.Split(fmt.Sprintf("%s", nameSliced[0]), "/")
+
+	path = nameSliced[0]
+	name = nameSliced[1]
+	nameSliced = strings.Split(fmt.Sprintf("%s", path), "/")
+
 	if len(nameSliced) < 5 {
 		err = errors.New("parseLine: can't parse / in path")
 		return  "", 0, "", "", err
 	}
-
-	if nameSliced[3] != "containers" {
-		err = errors.New("parseLine: can't parse / path -> follow only  /var/log/containers ")
+	if (nameSliced[3] != "containers" && nameSliced[3] != "pods") {
+		err = errors.New("parseLine: can't parse / path -> follow only  /var/log/pods ")
 		return  "", 0, "", "", err
 	}
+	if(name == "logstress") {
 	name = nameSliced[4]
-
+	}
 	// parse sequence and hashID (from message)
 	messageStartIndex := strings.Index(line, "\"message\":\"")
 	if messageStartIndex == -1 {
@@ -228,7 +235,7 @@ func parseLine(line string) (name string, seq int64, logTag string, hashID strin
 	message := line[messageStartIndex : messageStartIndex+messageEndIndex]
 
 	// get the sequence number of the log
-	logSliced := strings.Split(message, "-")
+	logSliced := strings.Split(message, " - ")
 	if len(logSliced) < 3 {
 		err = errors.New("parseLine: can't parse - in log")
 		return  "", 0, "", "", err
@@ -242,6 +249,7 @@ func parseLine(line string) (name string, seq int64, logTag string, hashID strin
 
 	// get the hashID from the log
 	hashID = strings.TrimSpace(logSliced[1])
+
 	return name, seq, logTag, hashID, nil
 }
 func ndjsonReporter(reportData reportStatistics, logsCurrentInfo map[string]logSourceInfo, logsTotalInfo map[string]logSourceInfo) {

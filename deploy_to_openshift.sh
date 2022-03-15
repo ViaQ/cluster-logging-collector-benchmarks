@@ -34,6 +34,14 @@ select_stress_profile() {
   maximum_logfile_size=10485760;
 
   case $stress_profile in
+      "benchmarking")
+        number_heavy_stress_containers=0;
+        heavy_containers_msg_per_sec=0;
+        number_low_stress_containers=10;
+        low_containers_msg_per_sec=7000;
+        number_of_log_lines_between_reports=10;
+        maximum_logfile_size=102400000;
+        ;;
       "no-stress")
         number_heavy_stress_containers=0;
         heavy_containers_msg_per_sec=0;
@@ -192,7 +200,8 @@ then
   gologfilewatcher_image="docker.io/cognetive/go-log-file-watcher-with-symlink-support-v0"
   fluentbit_image="fluent/fluent-bit:1.7-debug"
   fluentbit_conf="conf/collector/fluentbit/fluentbit-clf.conf"
-  vector_image="quay.io/dciancio/vector"
+  vector_image="timberio/vector:latest-alpine"
+  #vector_image=quay.io/openshift-logging/vector:0.14.1
   vector_conf="conf/collector/vector/vector-clf.toml"
   collector="fluentd"
   fluentd_pre=""
