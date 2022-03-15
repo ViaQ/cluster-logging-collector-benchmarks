@@ -2,8 +2,8 @@ apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor
 metadata:
   labels:
-    k8s-app: fluentd-monitor
-  name: fluentd-monitor
+    k8s-app: collector-monitor
+  name: collector-monitor
   namespace: logstress
 spec:
   endpoints:
@@ -12,4 +12,4 @@ spec:
     scheme: http
   selector:
     matchLabels:
-      app: fluentd
+      app: collector
