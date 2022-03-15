@@ -200,8 +200,8 @@ then
   gologfilewatcher_image="docker.io/cognetive/go-log-file-watcher-with-symlink-support-v0"
   fluentbit_image="fluent/fluent-bit:1.7-debug"
   fluentbit_conf="conf/collector/fluentbit/fluentbit-clf.conf"
-  #vector_image="quay.io/dciancio/vector"
-  vector_image=quay.io/openshift-logging/vector:0.14.1
+  vector_image="quay.io/dciancio/vector"
+  #vector_image=quay.io/openshift-logging/vector:0.14.1
   vector_conf="conf/collector/vector/vector-clf.toml"
   collector="fluentd"
   fluentd_pre=""
