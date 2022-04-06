@@ -37,10 +37,10 @@ select_stress_profile() {
       "benchmarking")
         number_heavy_stress_containers=0;
         heavy_containers_msg_per_sec=0;
-        number_low_stress_containers=10;
-        low_containers_msg_per_sec=7000;
+        number_low_stress_containers=200;
+        low_containers_msg_per_sec=50;
         number_of_log_lines_between_reports=10;
-        maximum_logfile_size=102400000;
+        maximum_logfile_size=51200000;
         ;;
       "no-stress")
         number_heavy_stress_containers=0;
@@ -168,6 +168,8 @@ deploy() {
   set_credentials
   deploy_logstress $number_heavy_stress_containers $heavy_containers_msg_per_sec $number_low_stress_containers $low_containers_msg_per_sec $use_log_samples $stressor_image
   if $gowatcher ; then deploy_gologfilewatcher "$gologfilewatcher_image"; fi
+  deploy_capture_statistics $number_of_log_lines_between_reports "$output_format" "$report_interval"
+	sleep 10
   case "$collector" in
     'vector') deploy_log_collector_vector "$vector_image" "$vector_conf";;
     'fluentd') deploy_log_collector_fluentd "$fluentd_image" "$fluentd_conf_file" "$fluentd_pre";;
@@ -179,7 +181,6 @@ deploy() {
     *) show_usage ;;
   esac
   if $gowatcher ; then expose_metrics_to_prometheus; fi
-  deploy_capture_statistics $number_of_log_lines_between_reports "$output_format" "$report_interval"
   if $evacuate_node ; then evacuate_node_for_performance_tests; fi
 }
 

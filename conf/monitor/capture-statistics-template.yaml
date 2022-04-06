@@ -49,7 +49,7 @@ objects:
             echo "Collecting Statistics";
             OUTPUT_FILE=/var/log/containers/stress.log;
             echo -e "\nOutput log file is: $OUTPUT_FILE\n";
-            touch $OUTPUT_FILE;
+            truncate -s 0 $OUTPUT_FILE;
             ./check-logs-sequence -rf ${output_format} -f $OUTPUT_FILE -c ${number_of_log_lines_between_reports} -l ${check_log_level} &
             echo "=== setup-end ===";
             while true; do
