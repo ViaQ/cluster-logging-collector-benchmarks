@@ -8,9 +8,6 @@ objects:
   kind: ServiceAccount
   metadata:
     name: stress-service-account
-#
-# Deployment replicas of heavy-log-stress pods
-#
 - apiVersion: apps/v1
   kind: Deployment
   metadata:
@@ -40,10 +37,6 @@ objects:
             - --log-lines-rate=${heavy_containers_msg_per_sec}
             - --source=${use_log_samples}
           restartPolicy: Always
-#
-#
-# Deployment replicas of low-log-stress pods
-#
 - apiVersion: apps/v1
   kind: Deployment
   metadata:
