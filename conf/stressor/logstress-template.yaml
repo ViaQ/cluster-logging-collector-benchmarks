@@ -68,8 +68,14 @@ objects:
           restartPolicy: Always
 parameters:
 - name: number_heavy_stress_containers
+  value: 0
 - name: heavy_containers_msg_per_sec
+  value: 1000
 - name: number_low_stress_containers
+  value: 1
 - name: low_containers_msg_per_sec
+  value: 50
 - name: use_log_samples
+  value: false
 - name: log_stressor_image
+  value: quay.io/repository/openshift-logging/log-stressor
