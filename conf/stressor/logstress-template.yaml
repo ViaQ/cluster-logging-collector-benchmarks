@@ -34,8 +34,8 @@ objects:
           name: heavy-log-stress
           args:
             - generate 
-            - --log-lines-rate=${heavy_containers_msg_per_sec}
-            - --source=${use_log_samples}
+            - --log-lines-rate="${heavy_containers_msg_per_sec}"
+            - --source="${use_log_samples}"
           restartPolicy: Always
 - apiVersion: apps/v1
   kind: Deployment
@@ -63,8 +63,8 @@ objects:
           name: low-log-stress
           args:
             - generate 
-            - --log-lines-rate=${low_containers_msg_per_sec}
-            - --source=${use_log_samples}
+            - --log-lines-rate="${low_containers_msg_per_sec}"
+            - --source="${use_log_samples}"
           restartPolicy: Always
 parameters:
 - name: number_heavy_stress_containers
