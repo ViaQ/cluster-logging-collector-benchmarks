@@ -4,10 +4,6 @@ apiVersion: template.openshift.io/v1
 metadata:
   name: logstress
 objects:
-- apiVersion: v1
-  kind: ServiceAccount
-  metadata:
-    name: stress-service-account
 - apiVersion: apps/v1
   kind: Deployment
   metadata:
@@ -23,13 +19,8 @@ objects:
           app: heavy-log-stress
           type: log-stressor
       spec:
-        serviceAccountName: stress-service-account
         containers:
         - image: ${log_stressor_image}
-          securityContext:
-            runAsUser: 0
-            privileged: true
-            allowPrivilegeEscalation: true
           imagePullPolicy: Always
           name: heavy-log-stress
           args:
@@ -52,13 +43,8 @@ objects:
           app: low-log-stress
           type: log-stressor
       spec:
-        serviceAccountName: stress-service-account
         containers:
         - image: ${log_stressor_image}
-          securityContext:
-            runAsUser: 0
-            privileged: true
-            allowPrivilegeEscalation: true
           imagePullPolicy: Always
           name: low-log-stress
           args:
@@ -78,4 +64,4 @@ parameters:
 - name: use_log_samples
   value: "false"
 - name: log_stressor_image
-  value: "quay.io/repository/openshift-logging/log-stressor"
+  value: "quay.io/openshift-logging/log-stressor"
