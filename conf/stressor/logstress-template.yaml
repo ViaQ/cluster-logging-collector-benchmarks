@@ -64,4 +64,4 @@ parameters:
 - name: use_log_samples
   value: "false"
 - name: log_stressor_image
-  value: "quay.io/openshift-logging/log-stressor"
+  value: "quay.io/openshift-logging/cluster-logging-load-client:latest"
